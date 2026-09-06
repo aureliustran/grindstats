@@ -1,5 +1,7 @@
 # Viewing and revoking my own sessions
 
+**Code:** `AUTH-004`
+
 **As an** authenticated user
 **I want** to see every device currently signed in to my account and end any one of them
 individually

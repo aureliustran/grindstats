@@ -1,5 +1,7 @@
 # Silent session refresh, rotation, and logout
 
+**Code:** `AUTH-003`
+
 **As an** authenticated user
 **I want** my short-lived access token to renew itself silently, and to be able to end my
 session on this device or on every device

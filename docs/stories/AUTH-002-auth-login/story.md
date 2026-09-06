@@ -1,5 +1,7 @@
 # Login and session establishment
 
+**Code:** `AUTH-002`
+
 **As a** visitor with an existing GrindStats account
 **I want** to log in with email + password or Google, and receive a secure session
 **So that** I can access my own data without my credentials or tokens ever being exposed

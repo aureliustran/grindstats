@@ -1,5 +1,7 @@
 # Public landing page for unauthenticated visitors
 
+**Code:** `LAND-001`
+
 **As an** unauthenticated visitor arriving at the GrindStats root URL
 **I want** a landing page that states what the product is and lets me log in or create an account without leaving the page
 **So that** I can understand the premise and start tracking in a single step, instead of bouncing between marketing and auth screens

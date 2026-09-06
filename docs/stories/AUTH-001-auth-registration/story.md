@@ -1,5 +1,7 @@
 # Account registration
 
+**Code:** `AUTH-001`
+
 **As an** unauthenticated visitor who has decided to use GrindStats
 **I want** to create an account with email + password, or with my Google account, and
 verify it's really me
@@ -8,7 +10,7 @@ verify it's really me
 ## Description
 
 Registration is the front door referenced by the public-landing-page story's auth modal
-(`docs/stories/public-landing-page/`), and this story specifies what happens once the
+(`docs/stories/LAND-001-public-landing-page/`), and this story specifies what happens once the
 visitor submits the Sign up tab or completes Google consent: password acceptance rules,
 role safety, email verification, account-enumeration protection, OAuth-to-local account
 linking, and password reset. This story deliberately does **not** cover what happens after

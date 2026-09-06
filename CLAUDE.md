@@ -50,6 +50,18 @@ separate people or agents still adds up to one coherent product.
 - **`docs/i18n-guidelines.md`** — `en-US` and `vi-VN` rules. §7 is the
   equivalent definition of done.
 
+### User stories
+
+Feature specs live under `docs/stories/<CODE>-<slug>/` — one folder per story, each with
+`story.md`, `acceptance-criteria.md`, `test-cases.md` and `diagram.md`. Every story has a
+code (`LAND-001`, `AUTH-002`, ...), area-prefixed and sequential within its area; the
+folder name and `story.md`'s own header both carry it. `docs/stories/index.md` lists every
+story with its code and tracks the next available number per area — check it before
+assigning a new one, and update it when you add a story. The `user-story-documentation`
+skill (`.claude/skills/user-story-documentation/`) automates this whole workflow, including
+code assignment; use it rather than hand-rolling a story doc.
+
+
 The three rules most likely to be broken by accident:
 
 - **`apps/web/src/styles/tokens.css` is the single source of truth for every

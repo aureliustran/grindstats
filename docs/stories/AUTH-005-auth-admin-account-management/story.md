@@ -1,5 +1,7 @@
 # Administering user accounts
 
+**Code:** `AUTH-005`
+
 **As a** SystemAdmin
 **I want** to suspend, force-log-out, and inspect the sessions and security events of any
 user account, and to grant or revoke the SystemAdmin role

@@ -20,22 +20,22 @@ most fully exercised: the full gateway check order lives in `auth-session-refres
 
 ## Reading order
 
-| Story | Actor | Capability | SRS coverage |
-|---|---|---|---|
-| [auth-registration](auth-registration/story.md) | Unauthenticated visitor | Create an account (email/password or Google), verify it, reset a forgotten password | §3.1 FR-01..08 |
-| [auth-login](auth-login/story.md) | Visitor with an existing account | Log in and receive a secure, cookie-based session | §3.2 FR-10..14, plus §3.3 FR-20/24 as they apply at login |
-| [auth-session-refresh-logout](auth-session-refresh-logout/story.md) | Authenticated user | Silent token refresh with replay detection; logout (one device / all) | §3.3 FR-20/21, §3.4 FR-30..34 |
-| [auth-session-management](auth-session-management/story.md) | Authenticated user | List and selectively revoke my own active sessions | §3.5 FR-40..41 |
-| [auth-admin-account-management](auth-admin-account-management/story.md) | SystemAdmin | Suspend/force-logout accounts, view sessions & security events, grant/revoke SystemAdmin — never touch health data | §3.6 FR-42..47, §3.3 FR-22/23 boundary |
+| Code | Story | Actor | Capability | SRS coverage |
+|---|---|---|---|---|
+| AUTH-001 | [auth-registration](AUTH-001-auth-registration/story.md) | Unauthenticated visitor | Create an account (email/password or Google), verify it, reset a forgotten password | §3.1 FR-01..08 |
+| AUTH-002 | [auth-login](AUTH-002-auth-login/story.md) | Visitor with an existing account | Log in and receive a secure, cookie-based session | §3.2 FR-10..14, plus §3.3 FR-20/24 as they apply at login |
+| AUTH-003 | [auth-session-refresh-logout](AUTH-003-auth-session-refresh-logout/story.md) | Authenticated user | Silent token refresh with replay detection; logout (one device / all) | §3.3 FR-20/21, §3.4 FR-30..34 |
+| AUTH-004 | [auth-session-management](AUTH-004-auth-session-management/story.md) | Authenticated user | List and selectively revoke my own active sessions | §3.5 FR-40..41 |
+| AUTH-005 | [auth-admin-account-management](AUTH-005-auth-admin-account-management/story.md) | SystemAdmin | Suspend/force-logout accounts, view sessions & security events, grant/revoke SystemAdmin — never touch health data | §3.6 FR-42..47, §3.3 FR-22/23 boundary |
 
 ## How the stories connect
 
 ```mermaid
 flowchart LR
-    REG[auth-registration] -->|account exists| LOGIN[auth-login]
-    LOGIN -->|session established| REFRESH[auth-session-refresh-logout]
-    LOGIN -->|session established| SESSIONS[auth-session-management]
-    REFRESH -.->|logout-all mechanism reused by| ADMIN[auth-admin-account-management]
+    REG["AUTH-001<br/>auth-registration"] -->|account exists| LOGIN["AUTH-002<br/>auth-login"]
+    LOGIN -->|session established| REFRESH["AUTH-003<br/>auth-session-refresh-logout"]
+    LOGIN -->|session established| SESSIONS["AUTH-004<br/>auth-session-management"]
+    REFRESH -.->|logout-all mechanism reused by| ADMIN["AUTH-005<br/>auth-admin-account-management"]
     REG -.->|password reset triggers logout-all in| REFRESH
     ADMIN -.->|suspend/force-logout also use| REFRESH
 ```
