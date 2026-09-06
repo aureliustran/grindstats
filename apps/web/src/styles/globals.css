@@ -1,0 +1,257 @@
+/* =============================================================================
+   GrindStats — global base styles
+   =============================================================================
+
+   Import order matters. In src/main.tsx:
+
+       import "./styles/tokens.css";   // must come first — defines the values
+       import "./styles/globals.css";  // consumes them
+
+   What belongs in THIS file:
+     - the reset and base element styles
+     - anything that should be true everywhere without a class being applied
+     - @keyframes and the reduced-motion blanket rule
+     - rules a component author should not have to remember
+
+   What does NOT belong here:
+     - design values (they live in tokens.css)
+     - component-specific styling (Tailwind utilities in markup, or a
+       component-scoped .css file when the component genuinely needs plain CSS)
+
+   See docs/design-system.md §2 for the full Tailwind-vs-plain-CSS division.
+   ============================================================================= */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* -----------------------------------------------------------------------------
+   RESET
+   Deliberately small. Tailwind's preflight already does most of the work; this
+   only adds what preflight leaves out or what our system needs differently.
+   -------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Anchor-link scrolling for the landing page nav. The reduced-motion block
+     at the bottom of this file turns the smoothness off — do not remove that
+     override; motion sickness is a real accessibility failure, not a taste. */
+  scroll-behavior: smooth;
+  /* Sticky header height, so an anchored section isn't hidden underneath it. */
+  scroll-padding-top: var(--space-16);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--paper-1);
+  color: var(--ink-1);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  /* Slightly lighter rendering; keeps IBM Plex from looking heavy on dark. */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* -----------------------------------------------------------------------------
+   TYPOGRAPHY BASE
+   -------------------------------------------------------------------------- */
+
+h1, h2, h3, h4 {
+  margin: 0;
+  color: var(--ink-0);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  /* Vietnamese words break differently than English and are on average longer.
+     Letting the browser hyphenate prevents a long vi-VN heading from
+     overflowing a container sized against its shorter English equivalent. */
+  overflow-wrap: break-word;
+}
+
+p {
+  margin: 0;
+  max-width: 68ch;  /* measure — longer lines are measurably harder to read */
+}
+
+/* The display face is for statements, not for reading. Anything set in it is
+   short by definition; if you find yourself setting a paragraph in it, the
+   paragraph is wrong or the face is. */
+.u-display {
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-tight);
+  text-transform: uppercase;
+  /* Stacked Vietnamese diacritics (ế ộ ữ) exceed the em box at display sizes
+     and get clipped by tight containers. This headroom is why. */
+  padding-block-start: 0.08em;
+}
+
+/* -----------------------------------------------------------------------------
+   NUMBERS — the most important rule in this file.
+
+   Every number the user reads goes in the mono face with TABULAR figures.
+   Proportional digits are variable-width, so columns go ragged and a value
+   that updates live visibly jitters as digits change. Apply .u-num to any
+   element containing a figure: a metric, a set count, a calorie total, an
+   axis label.
+
+   This handles rendering only. Locale-correct FORMATTING is a separate and
+   equally non-negotiable rule: every number goes through Intl.NumberFormat
+   with the active locale, because vi-VN inverts the separators — "2.620" means
+   2620 in Vietnamese, not 2.62. See docs/i18n-guidelines.md §4.
+   -------------------------------------------------------------------------- */
+
+.u-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Estimated rather than measured. Never render an estimate as if it were a
+   measurement — see docs/design-system.md §1. The marker must be explainable
+   on hover/focus, so pair this class with an accessible description. */
+.u-estimated {
+  color: var(--low-confidence);
+  border-block-end: var(--border-hairline) dotted currentColor;
+  cursor: help;
+}
+
+/* -----------------------------------------------------------------------------
+   FOCUS
+   :focus-visible, never :focus — mouse users shouldn't see rings they didn't
+   ask for, keyboard users must always see them. Never remove this outline
+   without replacing it with something meeting 3:1 against its background.
+   -------------------------------------------------------------------------- */
+
+:focus-visible {
+  outline: var(--border-heavy) solid var(--accent);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* -----------------------------------------------------------------------------
+   INTERACTIVE DEFAULTS
+   -------------------------------------------------------------------------- */
+
+a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+button,
+[role="button"],
+a.u-target,
+input[type="submit"] {
+  /* Minimum hit area, even when the visual is smaller. Pad the target rather
+     than growing the icon. */
+  min-height: var(--target-min);
+  min-inline-size: var(--target-min);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  /* A disabled control must explain itself somewhere adjacent — a dead end
+     with no stated reason is a bug, not a state. */
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* -----------------------------------------------------------------------------
+   MOTION
+   Functional only: motion explains a state change or it doesn't exist.
+   -------------------------------------------------------------------------- */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modal-enter {
+  from { opacity: 0; transform: translateY(var(--space-2)); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* The blanket reduced-motion rule. This catches CSS animation everywhere,
+   including components written by someone who forgot the requirement.
+
+   It does NOT catch JS-driven animation. A component animating in JS must
+   check window.matchMedia("(prefers-reduced-motion: reduce)") itself. There is
+   no way for this stylesheet to reach that code — which is exactly why it's
+   called out here rather than assumed. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   UTILITIES
+   -------------------------------------------------------------------------- */
+
+/* Visually hidden but available to screen readers. Use for the skip link and
+   for text that gives an icon-only control its accessible name. Do NOT use
+   display:none for this — it removes the element from the accessibility tree. */
+.u-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip link — first focusable element on the page, visible only on focus. */
+.u-skip-link:focus-visible {
+  position: fixed;
+  inset-block-start: var(--space-2);
+  inset-inline-start: var(--space-2);
+  z-index: var(--z-toast);
+  width: auto;
+  height: auto;
+  padding: var(--space-3) var(--space-4);
+  clip-path: none;
+  background: var(--paper-0);
+  color: var(--ink-0);
+}
+
+.u-content {
+  max-inline-size: var(--content-max);
+  margin-inline: auto;
+  padding-inline: var(--content-gutter);
+}

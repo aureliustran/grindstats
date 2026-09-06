@@ -19,6 +19,11 @@
 - [ ] An already-authenticated visitor hitting `/` is redirected to the dashboard
 - [ ] The page renders correctly in light and dark themes, and honours `prefers-reduced-motion`
 - [ ] The silhouette asset is original and depicts no real person or existing character
+- [ ] The page renders correctly in `en-US` and `vi-VN` with no clipped or overflowing text
+- [ ] No user-facing string is hardcoded; every key exists in both locale catalogs
+- [ ] Locale is detected from `Accept-Language`, and `?lng=vi` forces Vietnamese for testing
+- [ ] `<html lang>` reflects the active locale
+- [ ] Every design value used resolves to a token; no raw colors, sizes or durations appear
 
 ## Acceptance criteria (scenarios)
 
@@ -147,3 +152,46 @@ per the account-enumeration protection in SRS-AUTH-001 §5
 **Then** I am returned to the landing page with no session cookies set
 **And** a non-blocking message notes that sign-in was not completed
 **And** I remain able to use email and password instead
+
+### Scenario: a Vietnamese-language browser gets the Vietnamese landing page
+
+**Given** I am not authenticated
+**And** my browser sends an `Accept-Language` header preferring Vietnamese
+**When** I load `/`
+**Then** all landing page copy, menu items and modal labels render in Vietnamese
+**And** `<html lang>` is `vi-VN`
+**And** no English string remains visible anywhere on the page or in the auth modal
+
+### Scenario: any other language falls back to English
+
+**Given** my browser prefers a language we do not support, such as French
+**When** I load `/`
+**Then** the page renders in `en-US`
+**And** `<html lang>` is `en-US`
+
+### Scenario: the locale override forces Vietnamese for testing
+
+**Given** my browser prefers English
+**When** I load `/?lng=vi`
+**Then** the page renders in Vietnamese
+**And** this works in a production build, because with no language switcher it is
+the only way to reproduce a Vietnamese-only defect
+
+### Scenario: Vietnamese text does not break any layout
+
+**Given** the page is rendering in `vi-VN`
+**When** I view it at the mobile, tablet and desktop breakpoints
+**Then** no heading, button label, nav item or error message is clipped, truncated or
+overlapping
+**And** stacked diacritics such as `ế ộ ữ` are fully visible rather than cut off by
+their container
+**And** every face used renders Vietnamese glyphs rather than fallback boxes
+
+### Scenario: the page conforms to the token system
+
+**Given** the landing page implementation
+**When** its stylesheets and components are inspected
+**Then** every color, size, spacing and duration value resolves to a token defined in
+`tokens.css`
+**And** no raw hex value, pixel size or millisecond duration appears in a component
+**And** the page renders correctly in both light and dark theme

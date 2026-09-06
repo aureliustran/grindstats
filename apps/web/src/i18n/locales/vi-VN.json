@@ -1,0 +1,79 @@
+{
+  "common": {
+    "app_name": "GrindStats",
+    "loading": "Đang tải",
+    "try_again": "Thử lại",
+    "close": "Đóng"
+  },
+  "landing": {
+    "meta": {
+      "title": "GrindStats — theo dõi khối lượng tập, không phải cảm hứng",
+      "description": "Chỉ số cơ thể, tập kháng lực và cardio, cùng nhật ký bữa ăn — đo lường nghiêm túc, mỗi ngày."
+    },
+    "nav": {
+      "features": "Tính năng",
+      "how_it_works": "Cách hoạt động",
+      "pricing": "Bảng giá",
+      "login": "Đăng nhập",
+      "get_started": "Bắt đầu",
+      "menu_open": "Mở menu",
+      "menu_close": "Đóng menu",
+      "skip_to_content": "Chuyển đến nội dung"
+    },
+    "hero": {
+      "regimen_pushups": "100 CHỐNG ĐẨY",
+      "regimen_situps": "100 GẬP BỤNG",
+      "regimen_squats": "100 SQUAT",
+      "regimen_run": "CHẠY 10KM",
+      "punchline": "MỖI NGÀY, KHÔNG NGHỈ",
+      "aside": "(Chẳng ai bảo là nó thú vị cả.)",
+      "subhead": "GrindStats ghi lại đúng những gì bạn đã làm, và tính toán một cách trung thực.",
+      "cta_primary": "Bắt đầu theo dõi",
+      "silhouette_alt": "Bóng đen của một người đang sải bước"
+    },
+    "features": {
+      "heading": "Những gì được đo",
+      "metrics_title": "Chỉ số cơ thể",
+      "metrics_body": "Cân nặng, tỷ lệ mỡ, khối lượng cơ và số đo vòng, theo tần suất mà bạn thực sự duy trì được.",
+      "training_title": "Tập luyện",
+      "training_body": "Kháng lực tính theo số set hiệu quả cho mỗi nhóm cơ. Cardio tính theo năng lượng tiêu hao, bao gồm cả phần đốt thêm sau buổi tập.",
+      "nutrition_title": "Bữa ăn",
+      "nutrition_body": "Chụp đĩa thức ăn từ hai góc. Chỉnh lại ước lượng. Xong.",
+      "coaching_title": "Tư vấn",
+      "coaching_body": "Lời khuyên dựa trên chính số liệu của bạn, kèm theo con số đứng sau mỗi đề xuất."
+    },
+    "how_it_works": {
+      "heading": "Cách hoạt động",
+      "step_log_title": "Ghi lại buổi tập",
+      "step_log_body": "Đánh dấu từng mục khi bạn hoàn thành. Thêm cả những gì bạn tập ngẫu hứng.",
+      "step_measure_title": "Để dữ liệu tích lũy",
+      "step_measure_body": "Không có đề xuất nào được đưa ra khi chưa đủ 21 ngày dữ liệu. Xu hướng cần thời gian, không cần sự hào hứng.",
+      "step_adapt_title": "Điều chỉnh",
+      "step_adapt_body": "Mức tiêu hao năng lượng của bạn được ước tính từ diễn biến cân nặng thực tế, chứ không phải từ phỏng đoán của một công thức."
+    },
+    "pricing": {
+      "heading": "Bảng giá",
+      "placeholder": "Các gói dịch vụ chưa được chốt.",
+      "cta": "Bắt đầu miễn phí"
+    },
+    "auth": {
+      "dialog_label": "Đăng nhập vào GrindStats",
+      "tab_login": "Đăng nhập",
+      "tab_signup": "Đăng ký",
+      "email_label": "Email",
+      "email_placeholder": "ban@example.com",
+      "password_label": "Mật khẩu",
+      "submit_login": "Đăng nhập",
+      "submit_signup": "Tạo tài khoản",
+      "google_cta": "Tiếp tục với Google",
+      "divider": "hoặc",
+      "error_email_invalid": "Vui lòng nhập địa chỉ email hợp lệ.",
+      "error_password_short": "Mật khẩu phải có ít nhất {{count}} ký tự.",
+      "error_credentials": "Email hoặc mật khẩu không đúng.",
+      "error_unreachable": "Không kết nối được tới máy chủ. Vui lòng thử lại.",
+      "error_rate_limited": "Bạn đã thử quá nhiều lần. Vui lòng đợi một lát rồi thử lại.",
+      "error_google_cancelled": "Đăng nhập bằng Google chưa hoàn tất.",
+      "signup_next_step": "Vui lòng kiểm tra email để xác nhận tài khoản."
+    }
+  }
+}

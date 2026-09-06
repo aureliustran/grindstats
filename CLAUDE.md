@@ -38,6 +38,36 @@ other way around.
 
 ## Non-negotiable conventions
 
+### Frontend: design system and i18n
+
+Two documents are authoritative for anything rendered to a user. Read them
+before writing UI; they exist so that work done in separate sessions by
+separate people or agents still adds up to one coherent product.
+
+- **`docs/design-system.md`** — the visual and interaction rules, and the
+  reasoning behind them. §7 is a self-check list phrased so the answers are
+  observable rather than a matter of taste.
+- **`docs/i18n-guidelines.md`** — `en-US` and `vi-VN` rules. §7 is the
+  equivalent definition of done.
+
+The three rules most likely to be broken by accident:
+
+- **`apps/web/src/styles/tokens.css` is the single source of truth for every
+  design value.** Tailwind consumes those custom properties and defines none of
+  its own. Never write a raw hex, px or ms into a component — if the value you
+  need doesn't exist, add a token with a comment saying what it's for.
+- **No user-facing string is hardcoded.** Not labels, not errors, not
+  `aria-label`, `alt`, `title` or `placeholder`. Every one resolves through a
+  translation key that exists in *both* catalogs
+  (`scripts/check_i18n_parity.py` enforces this).
+- **Every number goes through `Intl.NumberFormat` with the active locale**, in
+  the mono face with tabular figures, carrying its unit. `vi-VN` inverts the
+  separators — "2.620" means 2620 in Vietnamese — so a raw `toFixed()` in the
+  DOM is a real defect in a calorie app, not a formatting nitpick.
+
+Layouts are designed for Vietnamese, which runs 10–30% longer than English and
+stacks diacritics vertically. An English-only mockup is not a finished design.
+
 - **Two-step writes for anything LLM-estimated or LLM-proposed.**
   `POST /meals/estimate` → `POST /meals/confirm`,
   `POST /routines/propose` → `POST /routines/confirm`. Never a single endpoint

@@ -1,0 +1,269 @@
+/* =============================================================================
+   GrindStats — design tokens
+   =============================================================================
+
+   THIS FILE IS THE SINGLE SOURCE OF TRUTH FOR EVERY DESIGN VALUE.
+
+   Read this before writing any UI. The rules here are explained rather than
+   just declared, because a rule you understand survives a refactor and a rule
+   you don't gets deleted by the next person.
+
+   How this file relates to Tailwind:
+     tailwind.config.js does NOT define its own colors, spacing or type scale.
+     It maps its utility names onto the custom properties declared here. That
+     means `bg-paper-1` and `var(--paper-1)` are guaranteed to be the same
+     value, and a token changed here changes both systems at once. If you ever
+     find a raw value in tailwind.config.js, that's a bug — move it here.
+
+   The hard rule:
+     NEVER write a raw color, size, or duration into a component. No #hex, no
+     px, no ms. If the value you need doesn't exist here, that's a design
+     decision: add a token with a comment explaining its job. This is what
+     stops a codebase accumulating forty-one slightly different greys.
+
+   See docs/design-system.md for the reasoning behind the whole system, and
+   docs/i18n-guidelines.md for why the line-height tokens are set the way
+   they are.
+   ============================================================================= */
+
+:root {
+  /* ---------------------------------------------------------------------------
+     COLOR — two monochrome ramps, one accent, and semantics that mean something.
+
+     The product is mostly numbers and charts. If the interface is colorful,
+     color stops carrying meaning when a chart needs it. So: the UI is grey,
+     the accent marks action, and every other color encodes a data meaning.
+
+     `paper` = backgrounds, `ink` = foregrounds. In dark theme these swap roles
+     (see the [data-theme] blocks below) rather than being redefined piecemeal,
+     which is why a component built from tokens themes correctly for free.
+
+     The off-white is deliberately warm rather than pure #fff — pure white next
+     to near-black reads as glare on large surfaces.
+     ------------------------------------------------------------------------- */
+
+  --paper-0: #ffffff;   /* cards, raised surfaces, modal bodies */
+  --paper-1: #f6f6f4;   /* page background */
+  --paper-2: #ebebe7;   /* subtle fills, table row banding, disabled surfaces */
+  --paper-3: #dcdcd6;   /* borders, dividers, chart gridlines */
+
+  --ink-0: #0a0a0a;     /* headings, display type, primary numbers */
+  --ink-1: #2a2a28;     /* body text */
+  --ink-2: #55554f;     /* secondary text, labels — 7.3:1 on paper-0, safe for body */
+  --ink-3: #85857c;     /* 3.6:1 on paper-0 — LARGE TEXT AND NON-TEXT ONLY.
+                           Do not use for body copy. It fails 4.5:1 and it is the
+                           single most likely accessibility mistake in this system. */
+
+  /* Exactly one accent, and it marks the primary action. If two things on a
+     screen are accent-colored, one of them is wrong. 4.95:1 on paper-0. */
+  --accent: #d92c0d;
+  --accent-hover: #b52309;
+  --accent-ink: #ffffff;  /* text placed ON the accent */
+
+  /* Semantic — data meaning and system state only. Never decoration.
+     `ok`/`danger` are NOT "good/bad" in a moral sense: they encode direction
+     against a target (e.g. below vs above a volume landmark), so they must
+     never be the only signal — pair them with a label or icon for colorblind
+     users and for the print/monochrome case. */
+  --ok: #1f6f43;
+  --warn: #8a5a00;
+  --danger: #a8200a;
+  --muted-data: #85857c;  /* de-emphasized series in a chart */
+
+  /* Confidence marker. Every estimated (not measured) value carries this —
+     see docs/design-system.md §1. BMR is ±10%; consumer body-fat readings are
+     ±3–4 points. A number shown without its uncertainty is a lie, and this
+     token is how the UI stops telling it. */
+  --low-confidence: #8a5a00;
+
+  /* ---------------------------------------------------------------------------
+     TYPE — three faces, each with one job.
+
+     Display : the regimen hero and section statements. Condensed, heavy, loud.
+     Body    : anything read as prose or UI labels.
+     Mono    : EVERY NUMBER, plus code and IDs.
+
+     Numbers use the mono face with tabular figures (see globals.css) because
+     proportional digits make columns ragged and make a live-updating value
+     jitter as digit widths change. This is not a stylistic preference; it is
+     what makes a table of numbers readable.
+
+     VIETNAMESE: any face used here must ship the Vietnamese subset. Verify
+     `ơ ư đ ă â ê ô` and the stacked set `ế ộ ữ ằ ậ` render as real glyphs
+     before adopting a face. Condensed display fonts drop these constantly.
+     A hero rendering as tofu boxes in vi-VN is a launch blocker.
+     ------------------------------------------------------------------------- */
+
+  --font-display: "Big Shoulders Display", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Courier New", monospace;
+
+  /* Modular scale, ~1.25. Use steps; don't interpolate between them. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: 3rem;
+  --text-5xl: 4rem;
+  /* The hero regimen lines. Fluid so the statement stays edge-to-edge from
+     phone to desktop without a pile of breakpoint overrides. */
+  --text-hero: clamp(2.5rem, 11vw, 8rem);
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+  --weight-black: 900;  /* display only */
+
+  /* LINE HEIGHT — set for Vietnamese, not English.
+     Vietnamese stacks diacritics vertically (ế ộ ữ), which needs more vertical
+     headroom than English. These values will look slightly airy against an
+     English-only mockup. Do not tighten them for that reason; you will clip
+     diacritics in vi-VN. Never go below 1.05 on display type, and give the
+     hero explicit overflow headroom. */
+  --leading-display: 1.08;
+  --leading-tight: 1.25;
+  --leading-normal: 1.6;
+  --leading-relaxed: 1.75;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.08em;   /* small caps labels, nav items */
+
+  /* ---------------------------------------------------------------------------
+     SPACE — 4px base. Everything is a multiple: padding, gaps, margins, heights.
+     This is what lets two components written weeks apart sit next to each other
+     without anyone nudging margins by 3px.
+     ------------------------------------------------------------------------- */
+
+  --space-1: 0.25rem;   /*  4px */
+  --space-2: 0.5rem;    /*  8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-24: 6rem;     /* 96px */
+  --space-32: 8rem;     /* 128px */
+
+  /* ---------------------------------------------------------------------------
+     SHAPE — near-square. The aesthetic is stark and industrial; rounded
+     corners read as friendly, and this product is not trying to be friendly.
+     radius-2 is the maximum; there is deliberately no pill or full-round token.
+     ------------------------------------------------------------------------- */
+
+  --radius-0: 0;
+  --radius-1: 2px;
+  --radius-2: 4px;
+
+  --border-hairline: 1px;
+  --border-heavy: 2px;    /* emphasis, focus rings, active states */
+
+  /* ---------------------------------------------------------------------------
+     MOTION — functional only. Motion explains a state change (a modal arriving,
+     a value updating) or it does not exist. Nothing decorative, nothing looping.
+
+     globals.css disables all of this under prefers-reduced-motion. A component
+     animating via JS must check that media query ITSELF — the CSS rule can't
+     reach JS-driven animation.
+     ------------------------------------------------------------------------- */
+
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 320ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ---------------------------------------------------------------------------
+     LAYERS — a fixed scale so nobody ever writes z-index: 9999 again.
+     ------------------------------------------------------------------------- */
+
+  --z-base: 0;
+  --z-sticky: 100;     /* sticky header */
+  --z-dropdown: 200;   /* mobile menu panel */
+  --z-backdrop: 300;
+  --z-modal: 400;      /* auth modal */
+  --z-toast: 500;
+
+  /* ---------------------------------------------------------------------------
+     LAYOUT
+     Breakpoints are documented here but CANNOT be used in media queries —
+     custom properties don't work there. The real values live in
+     tailwind.config.js; these exist so the numbers are stated once in prose.
+       sm 640px | md 768px | lg 1024px | xl 1280px
+     The mobile menu breakpoint is md (768px).
+     ------------------------------------------------------------------------- */
+
+  --content-max: 72rem;
+  --content-gutter: var(--space-6);
+
+  /* Minimum interactive target. Pad the hit area to reach this; don't grow the
+     icon. Applies even when the visible control is smaller. */
+  --target-min: 44px;
+}
+
+/* =============================================================================
+   DARK THEME
+   =============================================================================
+   Roles swap: ink becomes light, paper becomes dark. Because components
+   reference roles (--ink-1) rather than values, they theme without changes.
+
+   Two rules that are easy to get wrong:
+     1. Contrast must be re-verified here, not assumed. A pair that passes in
+        light can fail in dark.
+     2. The accent gets LIGHTER in dark theme. The light-theme accent (#d92c0d)
+        is only ~2.2:1 on near-black and would be unreadable.
+
+   Both a media query (system preference) and an attribute (explicit choice)
+   are supported, so a future theme toggle works in both directions without
+   redefining anything.
+   ============================================================================= */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper-0: #141413;
+    --paper-1: #0a0a0a;
+    --paper-2: #1f1f1d;
+    --paper-3: #33332f;
+
+    --ink-0: #fafaf7;
+    --ink-1: #e5e5e0;
+    --ink-2: #a8a89e;   /* 7.0:1 on paper-1 — safe for body */
+    --ink-3: #6e6e66;   /* LARGE TEXT AND NON-TEXT ONLY, same caveat as light */
+
+    --accent: #ff6a45;
+    --accent-hover: #ff8a6b;
+    --accent-ink: #0a0a0a;
+
+    --ok: #4caf7d;
+    --warn: #d9a441;
+    --danger: #ff6b52;
+    --muted-data: #6e6e66;
+    --low-confidence: #d9a441;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper-0: #141413;
+  --paper-1: #0a0a0a;
+  --paper-2: #1f1f1d;
+  --paper-3: #33332f;
+
+  --ink-0: #fafaf7;
+  --ink-1: #e5e5e0;
+  --ink-2: #a8a89e;
+  --ink-3: #6e6e66;
+
+  --accent: #ff6a45;
+  --accent-hover: #ff8a6b;
+  --accent-ink: #0a0a0a;
+
+  --ok: #4caf7d;
+  --warn: #d9a441;
+  --danger: #ff6b52;
+  --muted-data: #6e6e66;
+  --low-confidence: #d9a441;
+}

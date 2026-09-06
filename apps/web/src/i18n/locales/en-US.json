@@ -1,0 +1,79 @@
+{
+  "common": {
+    "app_name": "GrindStats",
+    "loading": "Loading",
+    "try_again": "Try again",
+    "close": "Close"
+  },
+  "landing": {
+    "meta": {
+      "title": "GrindStats — track the work, not the mood",
+      "description": "Body metrics, resistance and cardio training, and meal logging — measured properly, every single day."
+    },
+    "nav": {
+      "features": "Features",
+      "how_it_works": "How it works",
+      "pricing": "Pricing",
+      "login": "Log in",
+      "get_started": "Get started",
+      "menu_open": "Open menu",
+      "menu_close": "Close menu",
+      "skip_to_content": "Skip to content"
+    },
+    "hero": {
+      "regimen_pushups": "100 PUSH-UPS",
+      "regimen_situps": "100 SIT-UPS",
+      "regimen_squats": "100 SQUATS",
+      "regimen_run": "10KM RUN",
+      "punchline": "EVERY SINGLE DAY",
+      "aside": "(Nobody said it was interesting.)",
+      "subhead": "GrindStats records what you actually did, and does the arithmetic honestly.",
+      "cta_primary": "Start tracking",
+      "silhouette_alt": "Silhouette of a figure mid-stride"
+    },
+    "features": {
+      "heading": "What it measures",
+      "metrics_title": "Body metrics",
+      "metrics_body": "Weight, body fat, muscle mass and circumferences, at whatever cadence you actually keep.",
+      "training_title": "Training",
+      "training_body": "Resistance work by hard sets per muscle. Cardio by energy cost, afterburn included.",
+      "nutrition_title": "Meals",
+      "nutrition_body": "Photograph the plate from two angles. Correct the estimate. Move on.",
+      "coaching_title": "Coaching",
+      "coaching_body": "Advice built from your own numbers, with the number behind every recommendation shown."
+    },
+    "how_it_works": {
+      "heading": "How it works",
+      "step_log_title": "Log the work",
+      "step_log_body": "Check off each task as you finish it. Add what you improvised.",
+      "step_measure_title": "Let it accumulate",
+      "step_measure_body": "Nothing is prescribed on fewer than 21 days of data. Trends need time, not enthusiasm.",
+      "step_adapt_title": "Adapt",
+      "step_adapt_body": "Your energy expenditure is estimated from what actually happened to your weight, not from a formula's guess."
+    },
+    "pricing": {
+      "heading": "Pricing",
+      "placeholder": "Plans aren't finalised yet.",
+      "cta": "Get started free"
+    },
+    "auth": {
+      "dialog_label": "Sign in to GrindStats",
+      "tab_login": "Log in",
+      "tab_signup": "Sign up",
+      "email_label": "Email",
+      "email_placeholder": "you@example.com",
+      "password_label": "Password",
+      "submit_login": "Log in",
+      "submit_signup": "Create account",
+      "google_cta": "Continue with Google",
+      "divider": "or",
+      "error_email_invalid": "Enter a valid email address.",
+      "error_password_short": "Password must be at least {{count}} characters.",
+      "error_credentials": "Email or password is incorrect.",
+      "error_unreachable": "We couldn't reach the server. Try again.",
+      "error_rate_limited": "Too many attempts. Wait a moment and try again.",
+      "error_google_cancelled": "Sign-in with Google wasn't completed.",
+      "signup_next_step": "Check your email to confirm your account."
+    }
+  }
+}
