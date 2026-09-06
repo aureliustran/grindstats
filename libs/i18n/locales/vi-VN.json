@@ -1,0 +1,12 @@
+{
+  "errors": {
+    "AUTH_INVALID_CREDENTIALS": "Email hoặc mật khẩu không đúng.",
+    "AUTH_INVALID_TOKEN": "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
+    "AUTH_SESSION_EXPIRED": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+    "AUTH_FORBIDDEN": "Bạn không có quyền truy cập tài nguyên này.",
+    "AUTH_CSRF_FAILED": "Không xác minh được yêu cầu. Vui lòng tải lại trang và thử lại.",
+    "AUTH_ACCOUNT_SUSPENDED": "Tài khoản này đã bị tạm khóa.",
+    "AUTH_RATE_LIMITED": "Bạn đã thử quá nhiều lần. Vui lòng đợi một lát rồi thử lại.",
+    "VALIDATION_FAILED": "Yêu cầu chứa các trường không hợp lệ."
+  }
+}

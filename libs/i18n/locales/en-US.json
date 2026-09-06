@@ -1,0 +1,12 @@
+{
+  "errors": {
+    "AUTH_INVALID_CREDENTIALS": "Email or password is incorrect.",
+    "AUTH_INVALID_TOKEN": "Your session isn't valid. Please sign in again.",
+    "AUTH_SESSION_EXPIRED": "Your session has expired. Please sign in again.",
+    "AUTH_FORBIDDEN": "You don't have access to this resource.",
+    "AUTH_CSRF_FAILED": "This request couldn't be verified. Reload and try again.",
+    "AUTH_ACCOUNT_SUSPENDED": "This account is suspended.",
+    "AUTH_RATE_LIMITED": "Too many attempts. Wait a moment and try again.",
+    "VALIDATION_FAILED": "The request contains invalid fields."
+  }
+}

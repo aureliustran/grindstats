@@ -132,3 +132,22 @@ Full rules in [`design-system.md`](design-system.md) and
   at the contract, not with a local calculation.
 - Estimated values carry their confidence marker (`.u-estimated`). A number without its
   uncertainty is not a shortcut, it's a false claim about measurement precision.
+
+### Errors: whose words does the user read?
+
+The server returns `{ error: { code, message } }`, where `message` is **already localized**
+server-side from the `Accept-Language` header this app sends on every request.
+
+- **Default: render the SPA's own string** for that code, via
+  `apps/web/src/i18n/errorMessages.ts`. The SPA knows which screen and which form the user is
+  on; the server doesn't, so the SPA can say something more useful.
+- **Display the server's `message` only where a user story explicitly allows it.** Use
+  `renderServerMessage()` rather than reading `error.message` directly, so every such place
+  is findable with one grep when the policy is revisited.
+- **Unknown codes fall back to the server's message automatically.** A deployed frontend
+  being behind the server is normal; that fallback is why the server renders a message at
+  all, and it means an unrecognized code still shows the user something true instead of a
+  blank.
+- `ERROR_MESSAGE_KEYS` is typed `Record<ErrorCode, string>`. Adding a code to the model
+  breaks this app's type-check until someone decides what it should say — that break is the
+  feature, not an obstacle.

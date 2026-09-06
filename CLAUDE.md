@@ -67,7 +67,17 @@ change, and `--check` in CI.
 - **Several audit events may map to one error code, deliberately.** Unknown-email and
   bad-password are distinct events but one `AUTH_INVALID_CREDENTIALS`, because a
   distinguishable response is an account-enumeration oracle (FR-08, FR-14).
-- Error `message_key`s are i18n keys that must exist in both catalogs; the generator checks.
+- **Three language planes, never conflated:** audit records are written in **en-US always**
+  (a per-locale audit log can't be searched or aggregated, and it's append-only, so there is
+  no later fix); API response `message`s are rendered server-side from `libs/i18n/locales/`
+  via the request's `Accept-Language`; the SPA renders its own strings from
+  `apps/web/src/i18n/locales/`. The request locale affects the response only — it must never
+  reach storage.
+- The two catalog sets live in separate directories and are **not copies** — only their
+  internal coverage is checked, independently, by `scripts/check_i18n_parity.py`.
+- The SPA renders its own string per error code by default and shows the server's `message`
+  only where a story allows it (`renderServerMessage()`), or as the fallback for a code it
+  doesn't recognize.
 
 Rules and the open `AUTH_ACCOUNT_SUSPENDED` tension: `docs/audit-and-errors.md`. Workflow:
 the `audit-log-and-error-codes` skill.

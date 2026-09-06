@@ -82,6 +82,31 @@ Rules:
 
 ---
 
+## 1a. Two catalog sets, two directories
+
+There are two independent catalog sets. Know which one you are editing.
+
+| | `apps/web/src/i18n/locales/` | `libs/i18n/locales/` |
+|---|---|---|
+| Rendered by | The browser (this document's main subject) | The server, per request |
+| Locale from | Browser detection (§5) | The request's `Accept-Language` header |
+| Keys | Feature-namespaced (`landing.auth.error_credentials`) | The error code itself |
+| Covers | Everything the SPA displays | API error messages, emails, webhooks, non-browser clients |
+
+They are **not copies of each other**, and their content is deliberately not synchronized.
+The same failure legitimately reads differently from each: the SPA knows it is inside a
+login modal and can be specific; the server's message must make sense with no knowledge of
+where it will be shown. Forcing one catalog to serve both produces strings that are subtly
+wrong in both places.
+
+`scripts/check_i18n_parity.py` checks each set independently — every locale must cover its
+own source locale's keys. It never compares the two sets to each other.
+
+**A third plane exists and is not localized at all: audit records are always written in
+en-US**, whatever the requester's locale, because a per-locale audit log cannot be searched
+or aggregated. See `docs/audit-and-errors.md` §1a. The request locale affects the response
+only; it must never reach storage.
+
 ## 2a. Voice-critical strings: translate faithfully, not "better"
 
 Some strings — the hero slogan, the punchline, anything that is the brand's
@@ -180,6 +205,18 @@ in i18next's control rather than scattering `navigator.language` checks through 
 `<html lang>` must be set from the active locale on every render path — screen readers pick
 pronunciation from it, and getting Vietnamese read with English phonemes is unintelligible.
 
+### Telling the server which locale to render in
+
+The SPA sends the resolved locale as an **`Accept-Language` header on every API request**, so
+the server can render the error envelope's `message` in the same language the rest of the
+page is in. Without it, a Vietnamese page shows an English error the moment anything fails.
+
+Send the locale i18next actually resolved, not `navigator.language` — otherwise a `?lng=vi`
+override produces a Vietnamese UI with English server messages, which is exactly the case
+someone testing a Vietnamese bug is trying to inspect.
+
+The server falls back to en-US when the header is absent or names an unsupported language.
+
 ---
 
 ## 6. Fonts and text rendering
@@ -207,6 +244,11 @@ pronunciation from it, and getting Vietnamese read with English phonemes is unin
 6. No layout assumes English string length.
 7. `<html lang>` reflects the active locale.
 8. Vietnamese glyphs render correctly in every face used on the screen.
+9. API requests carry `Accept-Language` with the resolved locale, so server-rendered
+   messages match the page's language.
+10. If you added an error code: its message exists in every `libs/i18n/locales/` catalog,
+    and `apps/web/src/i18n/errorMessages.ts` maps it to an SPA key present in both SPA
+    catalogs.
 
 A CI check should enforce #2 mechanically — a script comparing the key sets of the two
 catalogs and failing on any asymmetry. It's twenty lines and it's the difference between

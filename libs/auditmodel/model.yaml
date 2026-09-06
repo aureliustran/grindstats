@@ -155,14 +155,18 @@ enums:
 # ERROR CODES — the EXTERNAL surface.
 #
 # Deliberately coarser than audit events. A code is a stable identifier clients
-# switch on; `message_key` is an i18n key, never English text (a literal string
-# here would be untranslatable and would drift from the catalogs).
+# switch on. There is no message text here: the SERVER renders the envelope's
+# `message` from libs/i18n/locales/<locale>.json — keyed by the code itself —
+# using the request's Accept-Language. The frontend keeps its own separate
+# strings in apps/web/src/i18n/ and normally renders those, displaying the
+# server's message only where a story explicitly allows it.
+#
+# The request locale affects the RESPONSE only. Audit records are always en-US.
 # -----------------------------------------------------------------------------
 error_codes:
 
   AUTH_INVALID_CREDENTIALS:
     http_status: 401
-    message_key: landing.auth.error_credentials
     description: >
       Login failed. Deliberately indistinguishable across unknown-email and
       bad-password (FR-08, FR-14) — the response, status and timing must be
@@ -170,7 +174,6 @@ error_codes:
 
   AUTH_INVALID_TOKEN:
     http_status: 401
-    message_key: common.auth.error_invalid_token
     description: >
       Access token failed the gateway chain (FR-20). One code for all four
       TokenRejectReason values: telling a caller WHICH check failed tells an
@@ -178,24 +181,20 @@ error_codes:
 
   AUTH_SESSION_EXPIRED:
     http_status: 401
-    message_key: common.auth.error_session_expired
     description: Refresh refused — idle beyond 14 days (FR-34). Re-login needed.
 
   AUTH_FORBIDDEN:
     http_status: 403
-    message_key: common.auth.error_forbidden
     description: >
       Authenticated but not permitted (FR-22). Explicitly 403, not 404 — the
       SRS rejects hiding admin routes behind a fake not-found.
 
   AUTH_CSRF_FAILED:
     http_status: 403
-    message_key: common.auth.error_csrf
     description: State-changing request without a matching CSRF token (FR-24).
 
   AUTH_ACCOUNT_SUSPENDED:
     http_status: 403
-    message_key: common.auth.error_suspended
     description: >
       Account suspended by an admin (FR-42).
       OPEN TENSION: returning this at login reveals the account exists, which
@@ -204,12 +203,10 @@ error_codes:
 
   AUTH_RATE_LIMITED:
     http_status: 429
-    message_key: landing.auth.error_rate_limited
     description: Rate limit or login backoff in effect (NFR-04, FR-13).
 
   VALIDATION_FAILED:
     http_status: 400
-    message_key: common.error_validation
     description: Request failed field validation. Details in the error payload.
 
 # -----------------------------------------------------------------------------
@@ -218,6 +215,12 @@ error_codes:
 # `fields` with `enum:` are aggregatable; plain `type:` fields are context.
 # `error_code:` links the event to what the caller is told — many events may
 # name the same code.
+#
+# `message:` is the EN-US STORAGE RENDERING. Audit records persist in en-US
+# regardless of the requester's locale, because a per-locale audit log cannot
+# be searched or aggregated. It is never localized. The structured fields are
+# the truth; the rendered message is a convenience for a human reading one
+# record.
 #
 # NEVER add a field carrying a secret: no passwords, no hashes, no raw token
 # values. Log the handle (jti), never the token (NFR-07).

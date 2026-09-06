@@ -392,22 +392,36 @@ const (
 	ErrValidationFailed ErrorCode = "VALIDATION_FAILED"
 )
 
-// ErrorCodeSpec carries what the API layer needs to render an error envelope.
-// MessageKey is an i18n key — never render it as text.
+// ErrorCodeSpec carries what the API layer needs to build an error envelope.
+//
+// There is no message text here. The envelope's message is rendered by the
+// server from libs/i18n/locales/<locale>.json, keyed by the code itself,
+// using the request's Accept-Language. See libs/i18n/README.md.
 type ErrorCodeSpec struct {
 	HTTPStatus int
-	MessageKey string
 }
 
 var ErrorCodes = map[ErrorCode]ErrorCodeSpec{
-	ErrAuthInvalidCredentials: {HTTPStatus: 401, MessageKey: "landing.auth.error_credentials"},
-	ErrAuthInvalidToken: {HTTPStatus: 401, MessageKey: "common.auth.error_invalid_token"},
-	ErrAuthSessionExpired: {HTTPStatus: 401, MessageKey: "common.auth.error_session_expired"},
-	ErrAuthForbidden: {HTTPStatus: 403, MessageKey: "common.auth.error_forbidden"},
-	ErrAuthCsrfFailed: {HTTPStatus: 403, MessageKey: "common.auth.error_csrf"},
-	ErrAuthAccountSuspended: {HTTPStatus: 403, MessageKey: "common.auth.error_suspended"},
-	ErrAuthRateLimited: {HTTPStatus: 429, MessageKey: "landing.auth.error_rate_limited"},
-	ErrValidationFailed: {HTTPStatus: 400, MessageKey: "common.error_validation"},
+	ErrAuthInvalidCredentials: {HTTPStatus: 401},
+	ErrAuthInvalidToken: {HTTPStatus: 401},
+	ErrAuthSessionExpired: {HTTPStatus: 401},
+	ErrAuthForbidden: {HTTPStatus: 403},
+	ErrAuthCsrfFailed: {HTTPStatus: 403},
+	ErrAuthAccountSuspended: {HTTPStatus: 403},
+	ErrAuthRateLimited: {HTTPStatus: 429},
+	ErrValidationFailed: {HTTPStatus: 400},
+}
+
+// AllErrorCodes lets a catalog completeness test iterate every code.
+var AllErrorCodes = []ErrorCode{
+	ErrAuthInvalidCredentials,
+	ErrAuthInvalidToken,
+	ErrAuthSessionExpired,
+	ErrAuthForbidden,
+	ErrAuthCsrfFailed,
+	ErrAuthAccountSuspended,
+	ErrAuthRateLimited,
+	ErrValidationFailed,
 }
 
 // --- Audit events --------------------------------------------------------

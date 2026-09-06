@@ -1,20 +1,32 @@
 #!/usr/bin/env python3
-"""Fail if the locale catalogs have diverged.
+"""Fail if any locale catalog has diverged from its source-of-truth locale.
 
-Why this exists: docs/i18n-guidelines.md makes en-US the source of truth and
-requires every key to exist in vi-VN too. That rule is only real if something
-checks it — a missing key otherwise falls back to English silently and ships.
+There are TWO independent catalog sets, in separate directories on purpose:
 
-Wire this into CI (roadmap Phase 12) and into your pre-commit if you like.
-Exit code 0 = catalogs match, 1 = they don't.
+  apps/web/src/i18n/locales/   the SPA's own strings, feature-namespaced keys
+  libs/i18n/locales/           the SERVER's rendered messages, keyed by error code
+
+They are not copies of each other and their contents are not compared — the same
+failure legitimately reads differently from each, because the SPA knows which
+screen it is on and the server does not. What IS checked, per set, is that every
+non-source locale covers every key its source locale defines.
+
+Why this has to be mechanical: a missing key falls back silently to the source
+language, so the defect ships looking like a working feature and is only found by
+someone reading in the other language.
+
+Exit 0 = all sets in parity, 1 = not.
 """
 import json
 import sys
 from pathlib import Path
 
-LOCALES_DIR = Path(__file__).resolve().parent.parent / "apps/web/src/i18n/locales"
-SOURCE = "en-US.json"
-TARGETS = ["vi-VN.json"]
+ROOT = Path(__file__).resolve().parent.parent
+
+CATALOG_SETS = [
+    ("frontend", ROOT / "apps/web/src/i18n/locales", "en-US.json", ["vi-VN.json"]),
+    ("server", ROOT / "libs/i18n/locales", "en-US.json", ["vi-VN.json"]),
+]
 
 
 def flatten(node, prefix=""):
@@ -25,38 +37,41 @@ def flatten(node, prefix=""):
     return keys
 
 
-def load(name):
-    path = LOCALES_DIR / name
+def load(path):
     if not path.exists():
         sys.exit(f"FAIL: catalog not found: {path}")
     return flatten(json.loads(path.read_text(encoding="utf-8")))
 
 
-def main():
-    source_keys = load(SOURCE)
+def check_set(label, directory, source, targets):
+    if not directory.is_dir():
+        print(f"SKIP: {label} — {directory} does not exist")
+        return False
+    source_keys = load(directory / source)
     failed = False
-
-    for target in TARGETS:
-        target_keys = load(target)
+    for target in targets:
+        target_keys = load(directory / target)
         missing = sorted(source_keys - target_keys)
         extra = sorted(target_keys - source_keys)
-
         if missing:
             failed = True
-            print(f"FAIL: {target} is missing {len(missing)} key(s) present in {SOURCE}:")
+            print(f"FAIL: [{label}] {target} is missing {len(missing)} key(s) from {source}:")
             for key in missing:
                 print(f"  - {key}")
         if extra:
-            # Not fatal on its own, but it usually means a key was renamed in
-            # en-US and the rename wasn't carried across — worth failing on.
+            # Usually a rename in the source that wasn't carried across, which
+            # leaves the target with a key nothing will ever read.
             failed = True
-            print(f"FAIL: {target} has {len(extra)} key(s) absent from {SOURCE}:")
+            print(f"FAIL: [{label}] {target} has {len(extra)} key(s) absent from {source}:")
             for key in extra:
                 print(f"  + {key}")
         if not missing and not extra:
-            print(f"OK: {target} matches {SOURCE} ({len(source_keys)} keys)")
+            print(f"OK: [{label}] {target} matches {source} ({len(source_keys)} keys)")
+    return failed
 
-    return 1 if failed else 0
+
+def main():
+    return 1 if any(check_set(*s) for s in CATALOG_SETS) else 0
 
 
 if __name__ == "__main__":

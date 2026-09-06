@@ -67,6 +67,13 @@ These hold across every endpoint and event, and do not need restating per-featur
 **API**
 - Versioned `/api/v1/...` paths from day one
 - The error envelope is universal; error codes are stable identifiers, not display text
+- **Every request carries `Accept-Language`.** The server renders the envelope's `message`
+  in that locale from `libs/i18n/locales/`, falling back to en-US. The header affects the
+  *response only* — audit records are always written in en-US, because a per-locale audit
+  log cannot be searched or aggregated (`audit-and-errors.md` §1a)
+- Clients branch on `code`, never on `message`. A client renders its own string for codes it
+  knows and falls back to the server's `message` for ones it doesn't — which is what lets the
+  server ship a new code before every client is updated
 - Aggregation endpoints return pre-bucketed series, never raw rows for the client to reduce
 - The effective user ID always comes from the token, never a client-supplied parameter
 

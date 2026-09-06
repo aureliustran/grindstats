@@ -5,6 +5,8 @@
 //
 // Status values and error codes shared with the backend. Importing from here
 // instead of retyping a literal is what keeps the two sides from drifting.
+//
+// Message TEXT is not shared — see the note at the bottom of this file.
 
 /** Who initiated an audited action. */
 export type ActorType =
@@ -191,17 +193,17 @@ export type ErrorCode =
   | "AUTH_RATE_LIMITED"
   | "VALIDATION_FAILED";
 
-/** i18n key per error code. Render the key through t(), never the code itself. */
-export const ERROR_MESSAGE_KEYS: Record<ErrorCode, string> = {
-  AUTH_INVALID_CREDENTIALS: "landing.auth.error_credentials",
-  AUTH_INVALID_TOKEN: "common.auth.error_invalid_token",
-  AUTH_SESSION_EXPIRED: "common.auth.error_session_expired",
-  AUTH_FORBIDDEN: "common.auth.error_forbidden",
-  AUTH_CSRF_FAILED: "common.auth.error_csrf",
-  AUTH_ACCOUNT_SUSPENDED: "common.auth.error_suspended",
-  AUTH_RATE_LIMITED: "landing.auth.error_rate_limited",
-  VALIDATION_FAILED: "common.error_validation",
-};
+// No message text or i18n keys are generated here on purpose.
+//
+// The SPA renders its OWN strings for these codes from apps/web/src/i18n,
+// because it knows the context (which screen, which form) and the server
+// does not. The server also sends a rendered `message` in the envelope,
+// localized via Accept-Language — display THAT only where a story
+// explicitly allows it (see docs/frontend.md).
+//
+// Map codes to your own keys with Record<ErrorCode, string> so that adding
+// a code here fails the SPA's type-check until it is handled:
+// see apps/web/src/i18n/errorMessages.ts
 
 export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   AUTH_INVALID_CREDENTIALS: 401,

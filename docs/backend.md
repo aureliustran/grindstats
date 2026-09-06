@@ -163,6 +163,24 @@ The event catalog — routing keys, publishers, consumers, payloads — is in th
   `POST /propose` → `POST /confirm`. Never one endpoint that generates and persists
 - The effective user ID always comes from the token, never from a client-supplied parameter
 
+## 5a. Messages, locales and the audit log
+
+The server renders user-facing message text itself — it is not only an API for one SPA, and
+emails, webhooks and future non-browser clients all need a localized message.
+
+- **Error messages come from `libs/i18n/locales/<locale>.json`**, keyed by the error code,
+  selected by the request's `Accept-Language` header, falling back to en-US. Never build an
+  error string in Go, and never send English text and expect a client to translate it.
+- **Audit records are always written in en-US**, whatever the requester's locale. A
+  per-actor-language audit log cannot be searched or aggregated, and the records are
+  append-only, so there is no later fix. The request locale affects the response only — it
+  must never reach storage.
+- The structured fields on an audit record are the real record; the rendered en-US message
+  is a convenience for a human reading one row. Anything a query must filter on belongs in a
+  field, not in the message text.
+- Error codes, enums and audit events are declared in `libs/auditmodel/model.yaml` and
+  generated — see `docs/audit-and-errors.md`. Never hand-write an error code string.
+
 ## 6. Computation rules
 
 - **"Services compute, the LLM narrates."** Every number a user sees is produced by

@@ -28,7 +28,8 @@ ROOT = Path(__file__).resolve().parent.parent
 MODEL = ROOT / "libs/auditmodel/model.yaml"
 GO_OUT = ROOT / "libs/auditmodel/generated.go"
 TS_OUT = ROOT / "apps/web/src/api/generated/audit.ts"
-EN_CATALOG = ROOT / "apps/web/src/i18n/locales/en-US.json"
+SERVER_LOCALES = ROOT / "libs/i18n/locales"
+SERVER_SOURCE_LOCALE = "en-US"
 
 # Field names that would mean a secret is being written to an append-only,
 # 90-day-retained log. Log the handle (jti), never the token itself (NFR-07).
@@ -42,20 +43,21 @@ CODE_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 PLACEHOLDER_RE = re.compile(r"\{([a-z_][a-z0-9_]*)\}")
 
 
-def catalog_keys():
-    """Flattened key set of the en-US catalog, or None if it isn't present."""
-    if not EN_CATALOG.exists():
-        return None
+def server_catalogs():
+    """{locale: {code: message}} from libs/i18n/locales, or None if absent.
+
+    These are the SERVER's rendering catalogs, keyed by error code — not the
+    frontend's, which live in apps/web/src/i18n and are the SPA's own business.
+    """
     import json
 
-    def flatten(node, prefix=""):
-        keys = set()
-        for k, v in node.items():
-            path = f"{prefix}.{k}" if prefix else k
-            keys |= flatten(v, path) if isinstance(v, dict) else {path}
-        return keys
-
-    return flatten(json.loads(EN_CATALOG.read_text(encoding="utf-8")))
+    if not SERVER_LOCALES.is_dir():
+        return None
+    out = {}
+    for path in sorted(SERVER_LOCALES.glob("*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        out[path.stem] = data.get("errors", {})
+    return out or None
 
 
 def fail(errors):
@@ -66,7 +68,7 @@ def fail(errors):
 
 def validate(model):
     errors = []
-    keys = catalog_keys()
+    catalogs = server_catalogs()
     enums = model.get("enums", {})
     codes = model.get("error_codes", {})
     events = model.get("events", {})
@@ -89,18 +91,25 @@ def validate(model):
             errors.append(f"error code '{name}': must be SCREAMING_SNAKE_CASE")
         if "http_status" not in spec:
             errors.append(f"error code '{name}': missing http_status")
-        if "message_key" not in spec:
+        if "message" in spec or "message_key" in spec:
             errors.append(
-                f"error code '{name}': missing message_key. Error text is an i18n "
-                "key, never a literal string — see docs/i18n-guidelines.md."
+                f"error code '{name}': message text does not belong in the model. The "
+                "server renders it from libs/i18n/locales/<locale>.json, keyed by the "
+                "code itself."
             )
-        elif keys is not None and spec["message_key"] not in keys:
-            # A message_key pointing at nothing renders as the raw key string to
-            # the user — the failure is invisible until someone hits that error.
-            errors.append(
-                f"error code '{name}': message_key '{spec['message_key']}' is not in "
-                "apps/web/src/i18n/locales/en-US.json. Add it to both catalogs."
-            )
+        if catalogs is not None:
+            source = catalogs.get(SERVER_SOURCE_LOCALE, {})
+            if name not in source:
+                errors.append(
+                    f"error code '{name}': no entry in libs/i18n/locales/"
+                    f"{SERVER_SOURCE_LOCALE}.json. The server cannot render a message "
+                    "for it, so callers would receive an empty one."
+                )
+            for locale, entries in catalogs.items():
+                if locale != SERVER_SOURCE_LOCALE and name in source and name not in entries:
+                    errors.append(
+                        f"error code '{name}': missing from libs/i18n/locales/{locale}.json"
+                    )
 
     for name, spec in events.items():
         if not EVENT_NAME_RE.match(name):
@@ -141,6 +150,17 @@ def validate(model):
         ec = spec.get("error_code")
         if ec is not None and ec not in codes:
             errors.append(f"event '{name}': unknown error_code '{ec}'")
+
+    # Catalog entries for codes that no longer exist are dead weight that later
+    # reads as though the code is still supported.
+    if catalogs is not None:
+        for locale, entries in catalogs.items():
+            for key in entries:
+                if key not in codes:
+                    errors.append(
+                        f"libs/i18n/locales/{locale}.json: entry '{key}' is not a declared "
+                        "error code"
+                    )
 
     return errors
 
@@ -196,19 +216,24 @@ def gen_go(model):
         L.append(f'\tErr{go_ident(name.lower())} ErrorCode = "{name}"')
     L.append(")")
     L.append("")
-    L.append("// ErrorCodeSpec carries what the API layer needs to render an error envelope.")
-    L.append("// MessageKey is an i18n key — never render it as text.")
+    L.append("// ErrorCodeSpec carries what the API layer needs to build an error envelope.")
+    L.append("//")
+    L.append("// There is no message text here. The envelope's message is rendered by the")
+    L.append("// server from libs/i18n/locales/<locale>.json, keyed by the code itself,")
+    L.append("// using the request's Accept-Language. See libs/i18n/README.md.")
     L.append("type ErrorCodeSpec struct {")
     L.append("\tHTTPStatus int")
-    L.append("\tMessageKey string")
     L.append("}")
     L.append("")
     L.append("var ErrorCodes = map[ErrorCode]ErrorCodeSpec{")
     for name, spec in model["error_codes"].items():
-        L.append(
-            f'\tErr{go_ident(name.lower())}: {{HTTPStatus: {spec["http_status"]}, '
-            f'MessageKey: "{spec["message_key"]}"}},'
-        )
+        L.append(f'\tErr{go_ident(name.lower())}: {{HTTPStatus: {spec["http_status"]}}},')
+    L.append("}")
+    L.append("")
+    L.append("// AllErrorCodes lets a catalog completeness test iterate every code.")
+    L.append("var AllErrorCodes = []ErrorCode{")
+    for name in model["error_codes"]:
+        L.append(f"\tErr{go_ident(name.lower())},")
     L.append("}")
     L.append("")
 
@@ -265,6 +290,8 @@ def gen_ts(model):
         "//",
         "// Status values and error codes shared with the backend. Importing from here",
         "// instead of retyping a literal is what keeps the two sides from drifting.",
+        "//",
+        "// Message TEXT is not shared — see the note at the bottom of this file.",
         "",
     ]
     for name, spec in model["enums"].items():
@@ -285,11 +312,17 @@ def gen_ts(model):
     L.extend([f'  | "{c}"' for c in codes])
     L[-1] += ";"
     L.append("")
-    L.append("/** i18n key per error code. Render the key through t(), never the code itself. */")
-    L.append("export const ERROR_MESSAGE_KEYS: Record<ErrorCode, string> = {")
-    for name, spec in model["error_codes"].items():
-        L.append(f'  {name}: "{spec["message_key"]}",')
-    L.append("};")
+    L.append("// No message text or i18n keys are generated here on purpose.")
+    L.append("//")
+    L.append("// The SPA renders its OWN strings for these codes from apps/web/src/i18n,")
+    L.append("// because it knows the context (which screen, which form) and the server")
+    L.append("// does not. The server also sends a rendered `message` in the envelope,")
+    L.append("// localized via Accept-Language — display THAT only where a story")
+    L.append("// explicitly allows it (see docs/frontend.md).")
+    L.append("//")
+    L.append("// Map codes to your own keys with Record<ErrorCode, string> so that adding")
+    L.append("// a code here fails the SPA's type-check until it is handled:")
+    L.append("// see apps/web/src/i18n/errorMessages.ts")
     L.append("")
     L.append("export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {")
     for name, spec in model["error_codes"].items():

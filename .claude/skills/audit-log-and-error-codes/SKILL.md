@@ -11,6 +11,8 @@ declare them apart and they drift, usually discovered during an incident when th
 you need turns out not to exist.
 
 **Model file:** `libs/auditmodel/model.yaml`
+**Server message catalogs:** `libs/i18n/locales/` — keyed by error code
+**Frontend catalogs:** `apps/web/src/i18n/locales/` — separate, not copies
 **Generator:** `python3 scripts/gen_audit_model.py` (`--check` validates without writing)
 **Full rules:** `docs/audit-and-errors.md`
 
@@ -38,6 +40,24 @@ it's an enum-constrained field on an event. If it's "an investigator, later" it'
 If it's "the client, right now" it's an error code.
 
 ---
+
+## Three language planes — get this right first
+
+| Plane | Language | Lives in |
+|---|---|---|
+| Audit storage | **Always en-US** | the audit record |
+| API response `message` | request's `Accept-Language` | `libs/i18n/locales/` |
+| Frontend display | browser locale | `apps/web/src/i18n/locales/` |
+
+**Audit records are always en-US, whatever locale the requester used.** A per-actor-language
+audit log cannot be searched or aggregated — "login failed" and "đăng nhập thất bại" become
+two different things to every query — and records are append-only, so there is no migration
+that fixes it later. The request locale affects the response only; it must never reach
+storage.
+
+The two catalog sets are **not copies**. The SPA knows which screen the user is on and can
+be specific; the server's message must make sense with no such context. Only each set's
+internal coverage is checked, independently.
 
 ## Enums
 
@@ -121,9 +141,12 @@ When adding:
 - Check an existing code doesn't already cover it. A proliferation of near-identical codes
   makes client handling worse, not better.
 - Declare `http_status` in the model so the same failure can't be 401 here and 403 there.
-- `message_key` is an **i18n key, never literal text** — and the key must exist in both
-  catalogs. The generator verifies it against `en-US.json`, because a dangling key renders
-  the raw key string to a user and nobody notices until that error path is hit.
+- **No message text goes in the model.** Add the server's wording to *every* catalog in
+  `libs/i18n/locales/` (keyed by the code itself — no indirection, so a key can't dangle).
+- **Then handle it in the SPA**: add a mapping in `apps/web/src/i18n/errorMessages.ts` and
+  the key it points at in both SPA catalogs. That map is `Record<ErrorCode, string>`, so the
+  frontend type-check breaks until someone decides what it says — which is the point, since
+  an unhandled code renders nothing to the user.
 - Codes are stable identifiers; renaming one is a breaking API change.
 
 ---
@@ -135,8 +158,10 @@ When adding:
 2. **Decide which of the three you're adding** (table above). Don't add all three reflexively.
 3. **Edit the model file only.** Keep descriptions substantive: they become the doc comments
    in generated Go, and they're what the next person reads instead of guessing.
-4. **Add i18n keys** to both catalogs for anything user-visible — error messages, enum
-   display text.
+4. **Add the strings, to the right catalogs.** A new error code needs its server wording in
+   every `libs/i18n/locales/` file *and* an entry in `apps/web/src/i18n/errorMessages.ts`
+   pointing at a key present in both SPA catalogs. Enum display text is SPA-side only.
+   Audit message templates stay en-US in the model and are never localized.
 5. **Generate:** `python3 scripts/gen_audit_model.py`
 6. **Fix what stopped compiling.** Exhaustive switches breaking on a new enum value is the
    system working.
@@ -148,9 +173,10 @@ When adding:
 ## What the generator catches
 
 Unknown enum or error-code references · message placeholders with no matching field · field
-names that look like secrets · enum values not in `lower_snake_case` · error codes missing
-an HTTP status or message key · `message_key`s absent from the catalog · generated files
-out of date with the model.
+names that look like secrets · enum values not in `lower_snake_case` · error codes missing an
+HTTP status · message text left in the model · codes with no server-catalog entry · server
+locales missing a code · catalog entries for codes that no longer exist · generated files out
+of date with the model.
 
 Each is invisible in review and expensive at runtime — the only good reason to spend a build
 step on a check.

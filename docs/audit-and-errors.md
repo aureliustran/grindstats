@@ -3,6 +3,8 @@
 **Status:** authoritative.
 **Model file:** [`libs/auditmodel/model.yaml`](../libs/auditmodel/model.yaml) — the single
 source of truth. Generated consumers are never hand-edited.
+**Server message catalogs:** [`libs/i18n/locales/`](../libs/i18n/) — keyed by error code.
+**Frontend catalogs:** `apps/web/src/i18n/locales/` — separate, and deliberately not copies.
 **Generator:** `python3 scripts/gen_audit_model.py` (`--check` for CI).
 **Companions:** [`shared-contract.md`](shared-contract.md) · [`backend.md`](backend.md) ·
 [`i18n-guidelines.md`](i18n-guidelines.md)
@@ -30,6 +32,63 @@ registers the event.
 
 This is the same pattern the rest of the repo already uses — `tokens.css` feeding Tailwind,
 OpenAPI feeding the API client. One declaration, generated consumers, no hand-copying.
+
+---
+
+## 1a. Three language planes — do not conflate them
+
+This is the rule that determines where every string lives.
+
+| Plane | Language | Lives in | Rendered by |
+|---|---|---|---|
+| **Audit storage** | **Always en-US**, no exceptions | The audit record itself | The server, at write time |
+| **API response** | The request's `Accept-Language` | `libs/i18n/locales/` | The server, per request |
+| **Frontend display** | The browser's detected locale | `apps/web/src/i18n/locales/` | The SPA |
+
+### Audit records are always en-US
+
+Whatever locale the requester used, the record persisted to the audit log is English. This
+is not laziness about internationalization — it is what makes the log usable at all.
+
+An audit log written in each actor's language cannot be searched or aggregated. "Login
+failed", "Đăng nhập thất bại" and whatever a third locale adds later would be three
+different things to every query an investigator writes, and no amount of care at query time
+recovers it, because the records are append-only: there is no migration that re-languages a
+year of history.
+
+So: **the request's `Accept-Language` affects the response only. It must never reach
+storage.** The same discipline as enum values, for the same reason — stored text is an
+identifier, not display copy.
+
+(The structured fields are the real record; the rendered en-US `message` is a convenience
+for a human reading a single row. Anything a query needs to filter on belongs in a field,
+not in the message text.)
+
+### The server renders its own messages
+
+The error envelope's `message` is rendered server-side from `libs/i18n/locales/<locale>.json`
+using the request's `Accept-Language`, falling back to en-US. The catalog is **keyed by the
+error code itself** — there is no separate message-key indirection, so a key cannot dangle
+or drift from the code it serves.
+
+The server needs its own catalog because the SPA is not the only client: emails, webhooks,
+and any future non-browser client all need a localized message, and none of them can read
+the SPA's catalogs.
+
+### The frontend keeps its own strings
+
+The SPA renders **its own** string for a known error code by default, because it knows
+context the server doesn't — which screen, which form, what the user was attempting. The
+server's message must make sense with no such knowledge.
+
+The two catalogs are therefore **not copies and are not content-synchronized.** Only their
+coverage is checked, independently, by `scripts/check_i18n_parity.py`.
+
+**The SPA displays the server's `message` only where a user story explicitly allows it** —
+typically for codes a deployed frontend doesn't recognize yet (the server being ahead of the
+client is a normal state, and that fallback is the main reason the server renders a message
+at all). `apps/web/src/i18n/errorMessages.ts` provides `renderServerMessage()` as the single
+sanctioned way to do it, so every such place is findable with one grep.
 
 ---
 
@@ -133,10 +192,11 @@ The same applies to `auth.token.rejected`: four `TokenRejectReason` values, one
 
 - **Codes are stable identifiers, not display text.** Clients switch on the code; humans
   read the message. Renaming a code is a breaking API change.
-- **`message_key` is an i18n key, never a literal string.** A hardcoded English error
-  message is untranslatable and drifts from the catalogs. The generator verifies every
-  `message_key` actually exists in `en-US.json` — a dangling key renders the raw key string
-  to the user, and nobody notices until someone hits that error path.
+- **No message text lives in the model.** The server renders it from
+  `libs/i18n/locales/<locale>.json`, keyed by the code. The generator rejects a `message` or
+  `message_key` in the model, requires every code to have an en-US entry (a code with no
+  entry means callers receive an empty message), requires every other locale to cover it,
+  and flags catalog entries for codes that no longer exist.
 - **Every code declares its HTTP status** in the model, so the same failure can't return 401
   from one endpoint and 403 from another.
 - **The envelope is universal**: `{ "error": { "code": "...", "message": "..." } }`.
@@ -155,10 +215,15 @@ i18n key for its display text to both catalogs. Check consumers handle it — an
 **Adding an audit event:** declare it with its fields and message template. Decide
 deliberately whether it needs an `error_code` — most don't. Run the generator.
 
-**Adding an error code:** declare code, `http_status`, `message_key`; add that key to both
-locale catalogs; run the generator. Then check whether an existing code already covers the
-case — a proliferation of near-identical codes makes client error handling worse, not
-better.
+**Adding an error code:** declare code and `http_status` in the model; add the message to
+**every** locale in `libs/i18n/locales/` (server side); add a mapping in
+`apps/web/src/i18n/errorMessages.ts` plus the key it points at in both SPA catalogs; run
+the generator. The SPA map is typed `Record<ErrorCode, string>`, so a new code breaks the
+frontend type-check until someone decides what it should say — which is the point, since a
+silently unhandled code renders nothing to the user.
+
+Then check whether an existing code already covers the case — a proliferation of
+near-identical codes makes client error handling worse, not better.
 
 **Never** hand-edit `generated.go` or `audit.ts`. The next run reverts you silently, and
 `--check` in CI will fail the build first.
@@ -167,8 +232,10 @@ better.
 
 Beyond emitting code, it fails on: unknown enum or error-code references, message
 placeholders with no matching field, field names that look like secrets, enum values that
-aren't `lower_snake_case`, error codes missing an HTTP status or message key, `message_key`s
-absent from the catalog, and generated files that are out of date with the model.
+aren't `lower_snake_case`, error codes missing an HTTP status, message text left in the
+model, error codes with no server-catalog entry, server locales missing a code the source
+locale defines, catalog entries for codes that no longer exist, and generated files that are
+out of date with the model.
 
 Each of those is a mistake that is invisible in review and expensive at runtime, which is
 the only good reason to spend a build step on it.
