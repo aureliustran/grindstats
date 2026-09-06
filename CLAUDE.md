@@ -38,6 +38,32 @@ other way around.
 
 ## Non-negotiable conventions
 
+### Architecture documents
+
+Three documents describe what crosses which boundary. Read the relevant ones before writing
+code that spans more than one domain:
+
+- **`docs/backend.md`** — service catalog, domain ownership, migrations (single-writer,
+  expand/contract), events, API conventions
+- **`docs/frontend.md`** — slice structure, the import rule, shared-dependency discipline
+- **`docs/shared-contract.md`** — the only sanctioned coupling between backend and frontend,
+  the contract-freeze and amendment rules, and the registry linking every other spec
+
+Both architecture docs open with a **"Target vs. now"** table. The distributed/micro-frontend
+architecture they describe mostly does not exist yet — the boundaries are real today as
+package and folder rules, not as deployments. Building the target shape during an early
+roadmap phase is the most common way to waste a week here.
+
+### Multi-agent work
+
+For a feature spanning backend and frontend, or several services/slices at once, use the
+`multi-agent-code-execution` skill (`.claude/skills/multi-agent-code-execution/`): one
+instructor agent writes the contract and partitions the work into slices with **disjoint
+file ownership**, then executors build against it in parallel without touching each other's
+paths or amending the contract. Don't fan out parallel agents without that partitioning
+step — two agents editing one file, or each inventing its own version of an API, is the
+failure it exists to prevent.
+
 ### Frontend: design system and i18n
 
 Two documents are authoritative for anything rendered to a user. Read them
