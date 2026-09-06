@@ -44,7 +44,7 @@ runtime, and the contract file no longer describes either implementation.
 | HTTP API | OpenAPI spec generated per domain from Gin route comments (swaggo) | OpenAPI 3 |
 | Frontend API client | Generated from the above — never hand-written | TypeScript |
 | Events | Routing keys, publishers, consumers, payload shapes (blueprint §11) | Table + payload schemas |
-| Errors | `{ "error": { "code": "...", "message": "..." } }` — every endpoint, no exceptions | Envelope + code registry |
+| Errors | `{ "error": { "code": "...", "message": "..." } }` — every endpoint, no exceptions. Codes are declared in [`libs/auditmodel/model.yaml`](../libs/auditmodel/model.yaml) and generated for both sides; see [`audit-and-errors.md`](audit-and-errors.md) | Envelope + generated code registry |
 | Auth | Cookie transport, CSRF header, token claims, check order | [`srs-authentication.md`](srs-authentication.md) |
 | Cross-domain interfaces | Exported service interfaces (in-process today, HTTP at Phase 10) | Go interfaces |
 
@@ -147,6 +147,7 @@ reachable from here in one hop.
 | [`design-system.md`](design-system.md) | Visual and interaction rules, tokens, accessibility floors |
 | [`i18n-guidelines.md`](i18n-guidelines.md) | en-US / vi-VN rules, formatting, voice-critical strings |
 | [`srs-authentication.md`](srs-authentication.md) | SRS-AUTH-001: auth, sessions, roles, security requirements |
+| [`audit-and-errors.md`](audit-and-errors.md) | Enumerations, audit events, and the error codes derived from them — model file, rules, generator |
 | [`stories/index.md`](stories/index.md) | Every user story, by code, with acceptance criteria and test cases |
 | [`stories/auth-epic-overview.md`](stories/auth-epic-overview.md) | How the five auth stories relate and depend on each other |
 | [`blueprint-url.txt`](blueprint-url.txt) | Link to the published architecture blueprint (the overall source of truth) |

@@ -1,0 +1,386 @@
+# =============================================================================
+# GrindStats — audit, enumeration & error-code model
+# =============================================================================
+#
+# THE SINGLE SOURCE OF TRUTH for: closed-set attribute values (enums), audit
+# event definitions, and the error codes derived from them.
+#
+# Generated consumers (never hand-edit those files):
+#   libs/auditmodel/generated.go            Go constants + validators
+#   apps/web/src/api/generated/audit.ts     TS types for status values + codes
+# Regenerate with: python3 scripts/gen_audit_model.py
+#
+# Rules for changing this file: docs/audit-and-errors.md. The two that get
+# broken first:
+#   1. An enum VALUE is a permanent storage/wire identifier, never display
+#      text. Renaming one invalidates every stored row and audit record that
+#      used it. Display text comes from i18n keys.
+#   2. Several audit events may map to ONE error code. That is deliberate and
+#      often a security control — see auth.login.failed below.
+# =============================================================================
+
+version: 1
+
+# -----------------------------------------------------------------------------
+# ENUMS — closed sets.
+#
+# Constrain a field with an enum when you will want to COUNT or GROUP BY it
+# ("how many login failures last week were rate-limits?"). That question is
+# unanswerable over free text. Leave a field free-form when it is context for a
+# human reading one record (an IP, a request ID), not something to aggregate.
+# -----------------------------------------------------------------------------
+enums:
+
+  ActorType:
+    description: Who initiated an audited action.
+    values:
+      user: A normal authenticated account acting on its own data.
+      system_admin: A SystemAdmin acting through an admin endpoint.
+      system: A scheduled job or internal process with no human initiator.
+      anonymous: An unauthenticated caller (login attempts, registration).
+
+  Outcome:
+    description: Whether the audited attempt achieved its effect.
+    values:
+      success: The action completed and its effect is persisted.
+      failure: The action was attempted and did not complete.
+      denied: The action was refused by an authorization or policy check.
+
+  Severity:
+    description: Operational attention an event warrants.
+    values:
+      info: Normal activity. Expected in volume.
+      warn: Anomalous but not necessarily malicious; worth a dashboard.
+      error: The system failed to do something it should have.
+      critical: Probable compromise or data-integrity risk. Page someone.
+
+  Role:
+    description: System roles (SRS-AUTH-001 §1.4). Exactly two, deliberately.
+    values:
+      user: Default for every account; own data only.
+      system_admin: Accounts and sessions only — never health data (FR-47).
+
+  # --- Domain status enums (blueprint §6, §12) -------------------------------
+
+  RoutineStatus:
+    description: Lifecycle of a routine template.
+    values:
+      draft: Being composed; not generating occurrences.
+      active: Generating occurrences on its recurrence rule.
+      paused: Retained but not generating occurrences.
+      completed: Finished; kept for history.
+
+  OccurrenceStatus:
+    description: Lifecycle of one concrete scheduled period.
+    values:
+      upcoming: Generated ahead of time. Read-only preview.
+      active: In progress; tasks may be checked, unchecked, or added.
+      completed: Finished. Editable for a 24h late-logging grace window.
+      skipped: Explicitly skipped, or the window passed untouched.
+
+  TaskStatus:
+    description: State of one task inside an occurrence.
+    values:
+      unchecked: Not yet done.
+      checked: Done. For training tasks, linked to logged sets.
+      skipped: Deliberately not done this occurrence.
+
+  PeriodKind:
+    description: What kind of session a routine period represents.
+    values:
+      resistance: Measured for muscle/strength stimulus.
+      cardio: Measured for energy expenditure, including EPOC.
+      habit: Boolean completion; no metrics written.
+      rest: Planned non-training day.
+
+  TrainingType:
+    description: Training modality. Drives which analytics pipeline applies.
+    values:
+      resistance: Sets, reps, load. Feeds volume-landmark analysis.
+      cardio: Duration, HR, zone. Feeds energy-expenditure analysis.
+
+  CalorieSource:
+    description: How a calorie log entry was produced.
+    values:
+      manual: Entered by hand.
+      photo: Estimated from a meal photo by Qwen-VL, then user-confirmed.
+      barcode: Scanned from a product barcode.
+    note: >
+      A shift of >25 percentage points in this mix between windows invalidates
+      the adaptive-TDEE estimator and restarts its window (blueprint §13).
+      That rule is only implementable because this is a closed set.
+
+  LinkedProvider:
+    description: External account types a user can link.
+    values:
+      google: Google OAuth2 identity.
+      apple: Apple identity. Planned, not yet implemented.
+      qwen: User-supplied Qwen/DashScope API key (not an identity).
+
+  # --- Auth failure reasons --------------------------------------------------
+
+  LoginFailureReason:
+    description: >
+      Why a login attempt failed. INTERNAL — this granularity exists for
+      forensics and must never reach the client. See auth.login.failed.
+    values:
+      unknown_email: No account exists for the submitted address.
+      bad_password: Account exists; password did not verify.
+      account_suspended: Credentials valid but the account is suspended.
+      backoff_active: Rejected without checking credentials; backoff in effect.
+      rate_limited: Rejected by the gateway rate limiter before reaching auth.
+
+  TokenRejectReason:
+    description: >
+      Which link in the gateway check chain failed (FR-20). The declared order
+      IS the evaluation order — the first failing check is what gets recorded.
+    values:
+      bad_signature: Signature verification failed.
+      expired: Past its exp claim.
+      blacklisted: jti present in blacklist:{jti}.
+      epoch_stale: iat earlier than user_blacklist_epoch:{user_id}.
+
+  AdminAction:
+    description: Administrative actions, each append-only audited (FR-45).
+    values:
+      suspend: Suspend an account; sets epoch, blocks login.
+      unsuspend: Lift a suspension. Does not restore prior sessions.
+      force_logout: Set epoch without suspending.
+      role_grant: Grant SystemAdmin.
+      role_revoke: Revoke SystemAdmin.
+      view_sessions: Read a user's session list.
+      view_security_events: Read a user's security events.
+
+# -----------------------------------------------------------------------------
+# ERROR CODES — the EXTERNAL surface.
+#
+# Deliberately coarser than audit events. A code is a stable identifier clients
+# switch on; `message_key` is an i18n key, never English text (a literal string
+# here would be untranslatable and would drift from the catalogs).
+# -----------------------------------------------------------------------------
+error_codes:
+
+  AUTH_INVALID_CREDENTIALS:
+    http_status: 401
+    message_key: landing.auth.error_credentials
+    description: >
+      Login failed. Deliberately indistinguishable across unknown-email and
+      bad-password (FR-08, FR-14) — the response, status and timing must be
+      identical, or this code becomes an account-enumeration oracle.
+
+  AUTH_INVALID_TOKEN:
+    http_status: 401
+    message_key: common.auth.error_invalid_token
+    description: >
+      Access token failed the gateway chain (FR-20). One code for all four
+      TokenRejectReason values: telling a caller WHICH check failed tells an
+      attacker whether a jti is known, or whether an epoch moved.
+
+  AUTH_SESSION_EXPIRED:
+    http_status: 401
+    message_key: common.auth.error_session_expired
+    description: Refresh refused — idle beyond 14 days (FR-34). Re-login needed.
+
+  AUTH_FORBIDDEN:
+    http_status: 403
+    message_key: common.auth.error_forbidden
+    description: >
+      Authenticated but not permitted (FR-22). Explicitly 403, not 404 — the
+      SRS rejects hiding admin routes behind a fake not-found.
+
+  AUTH_CSRF_FAILED:
+    http_status: 403
+    message_key: common.auth.error_csrf
+    description: State-changing request without a matching CSRF token (FR-24).
+
+  AUTH_ACCOUNT_SUSPENDED:
+    http_status: 403
+    message_key: common.auth.error_suspended
+    description: >
+      Account suspended by an admin (FR-42).
+      OPEN TENSION: returning this at login reveals the account exists, which
+      is in conflict with FR-08/FR-14 enumeration protection. See
+      docs/audit-and-errors.md §6. Resolve before implementing Phase 2.
+
+  AUTH_RATE_LIMITED:
+    http_status: 429
+    message_key: landing.auth.error_rate_limited
+    description: Rate limit or login backoff in effect (NFR-04, FR-13).
+
+  VALIDATION_FAILED:
+    http_status: 400
+    message_key: common.error_validation
+    description: Request failed field validation. Details in the error payload.
+
+# -----------------------------------------------------------------------------
+# AUDIT EVENTS — the INTERNAL record: who did what to whom, and how it ended.
+#
+# `fields` with `enum:` are aggregatable; plain `type:` fields are context.
+# `error_code:` links the event to what the caller is told — many events may
+# name the same code.
+#
+# NEVER add a field carrying a secret: no passwords, no hashes, no raw token
+# values. Log the handle (jti), never the token (NFR-07).
+# -----------------------------------------------------------------------------
+events:
+
+  auth.register.succeeded:
+    description: A new account was created.
+    actor: anonymous
+    outcome: success
+    severity: info
+    fields:
+      user_id: {type: id}
+      via: {enum: LinkedProvider, optional: true, note: absent for local signup}
+    message: "Account created for {user_id}"
+
+  auth.login.succeeded:
+    description: Credentials or OAuth accepted; a session was established.
+    actor: user
+    outcome: success
+    severity: info
+    fields:
+      user_id: {type: id}
+      session_jti: {type: id}
+      device_label: {type: string, optional: true}
+      source_ip: {type: string}
+    message: "Login succeeded for {user_id} from {device_label}"
+
+  auth.login.failed:
+    description: >
+      A login attempt failed. The `reason` enum is the whole point of this
+      event — it is what makes "how many failures were rate-limits this week"
+      answerable. It is ALSO why this event must never be rendered to a client.
+    actor: anonymous
+    outcome: failure
+    severity: warn
+    fields:
+      reason: {enum: LoginFailureReason}
+      user_id: {type: id, optional: true, note: absent when the email is unknown}
+      source_ip: {type: string}
+    message: "Login failed ({reason}) from {source_ip}"
+    error_code: AUTH_INVALID_CREDENTIALS
+
+  auth.login.backoff_triggered:
+    description: Fifth consecutive failure for an account; backoff begins (FR-13).
+    actor: anonymous
+    outcome: denied
+    severity: warn
+    fields:
+      user_id: {type: id}
+      delay_seconds: {type: int}
+      source_ip: {type: string}
+    message: "Backoff started for {user_id}: {delay_seconds}s"
+    error_code: AUTH_RATE_LIMITED
+
+  auth.token.rejected:
+    description: Gateway rejected an access token. `reason` is the FIRST failing check.
+    actor: user
+    outcome: denied
+    severity: info
+    fields:
+      reason: {enum: TokenRejectReason}
+      jti: {type: id, note: "the handle, never the token itself"}
+      user_id: {type: id, optional: true}
+      request_id: {type: id}
+    message: "Token rejected ({reason}) jti={jti}"
+    error_code: AUTH_INVALID_TOKEN
+
+  auth.refresh.rotated:
+    description: Refresh token exchanged for a new pair; old jti blacklisted (FR-30).
+    actor: user
+    outcome: success
+    severity: info
+    fields:
+      user_id: {type: id}
+      old_jti: {type: id}
+      new_jti: {type: id}
+    message: "Refresh rotated for {user_id}"
+
+  auth.refresh.replay_detected:
+    description: >
+      An already-rotated refresh token was presented (FR-31). Treated as a
+      stolen token: every session for the user is revoked. Flagged WARN+ by
+      NFR-07 — this is the event most worth alerting on in the whole system.
+    actor: user
+    outcome: denied
+    severity: critical
+    fields:
+      user_id: {type: id}
+      replayed_jti: {type: id}
+      source_ip: {type: string}
+    message: "Refresh replay detected for {user_id}; all sessions revoked"
+    error_code: AUTH_INVALID_TOKEN
+
+  auth.logout:
+    description: Single-session logout; tokens blacklisted (FR-32).
+    actor: user
+    outcome: success
+    severity: info
+    fields:
+      user_id: {type: id}
+      session_jti: {type: id}
+    message: "Logout for {user_id}"
+
+  auth.logout_all:
+    description: >
+      Epoch advanced, revoking every session (FR-33). Also emitted when
+      triggered indirectly by password reset or admin action — `trigger` says
+      which, so a spike in admin-triggered logouts is distinguishable from a
+      spike in user-initiated ones.
+    actor: user
+    outcome: success
+    severity: info
+    fields:
+      user_id: {type: id}
+      trigger: {enum: AdminAction, optional: true, note: absent when user-initiated}
+    message: "All sessions revoked for {user_id}"
+
+  auth.session.revoked:
+    description: One specific session revoked from the session list (FR-41).
+    actor: user
+    outcome: success
+    severity: info
+    fields:
+      user_id: {type: id}
+      revoked_jti: {type: id}
+    message: "Session {revoked_jti} revoked by {user_id}"
+
+  auth.password_reset.completed:
+    description: Password changed via reset token; triggers logout-all (FR-07).
+    actor: user
+    outcome: success
+    severity: warn
+    fields:
+      user_id: {type: id}
+      source_ip: {type: string}
+    message: "Password reset completed for {user_id}"
+
+  admin.action.performed:
+    description: >
+      Any SystemAdmin action (FR-45). Append-only; no API may delete these.
+      One event with an `action` enum rather than seven near-identical events —
+      every admin action needs the same five fields, and a single event keeps
+      "show me everything this admin did" a single query.
+    actor: system_admin
+    outcome: success
+    severity: warn
+    fields:
+      action: {enum: AdminAction}
+      admin_id: {type: id}
+      target_user_id: {type: id}
+      request_id: {type: id}
+      new_role: {enum: Role, optional: true, note: only for role_grant/role_revoke}
+    message: "Admin {admin_id} performed {action} on {target_user_id}"
+
+  admin.action.denied:
+    description: A non-admin token attempted an admin endpoint (FR-22, logged per §6 AC-5).
+    actor: user
+    outcome: denied
+    severity: warn
+    fields:
+      user_id: {type: id}
+      path: {type: string}
+      request_id: {type: id}
+    message: "Forbidden admin access attempt by {user_id} on {path}"
+    error_code: AUTH_FORBIDDEN

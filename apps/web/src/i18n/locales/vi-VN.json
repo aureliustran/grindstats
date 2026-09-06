@@ -3,7 +3,15 @@
     "app_name": "GrindStats",
     "loading": "Đang tải",
     "try_again": "Thử lại",
-    "close": "Đóng"
+    "close": "Đóng",
+    "auth": {
+      "error_invalid_token": "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
+      "error_session_expired": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+      "error_forbidden": "Bạn không có quyền truy cập mục này.",
+      "error_csrf": "Không xác minh được yêu cầu. Vui lòng tải lại trang và thử lại.",
+      "error_suspended": "Tài khoản này đã bị tạm khóa."
+    },
+    "error_validation": "Một số trường cần được kiểm tra lại."
   },
   "landing": {
     "meta": {

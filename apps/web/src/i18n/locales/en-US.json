@@ -3,7 +3,15 @@
     "app_name": "GrindStats",
     "loading": "Loading",
     "try_again": "Try again",
-    "close": "Close"
+    "close": "Close",
+    "auth": {
+      "error_invalid_token": "Your session isn't valid. Please log in again.",
+      "error_session_expired": "Your session expired. Please log in again.",
+      "error_forbidden": "You don't have access to that.",
+      "error_csrf": "That request couldn't be verified. Reload the page and try again.",
+      "error_suspended": "This account is suspended."
+    },
+    "error_validation": "Some fields need attention."
   },
   "landing": {
     "meta": {

@@ -54,6 +54,24 @@ architecture they describe mostly does not exist yet — the boundaries are real
 package and folder rules, not as deployments. Building the target shape during an early
 roadmap phase is the most common way to waste a week here.
 
+### Audit logs, enums and error codes
+
+Declared once in `libs/auditmodel/model.yaml` and generated into Go
+(`libs/auditmodel/generated.go`) and TypeScript (`apps/web/src/api/generated/audit.ts`) —
+**never hand-edit the generated files.** Run `python3 scripts/gen_audit_model.py` after any
+change, and `--check` in CI.
+
+- **Enum values are permanent storage identifiers, never display text.** Renaming one
+  invalidates stored rows and append-only audit records. Display text comes from i18n keys.
+- **Never log a secret** — log the handle (`jti`), never the token.
+- **Several audit events may map to one error code, deliberately.** Unknown-email and
+  bad-password are distinct events but one `AUTH_INVALID_CREDENTIALS`, because a
+  distinguishable response is an account-enumeration oracle (FR-08, FR-14).
+- Error `message_key`s are i18n keys that must exist in both catalogs; the generator checks.
+
+Rules and the open `AUTH_ACCOUNT_SUSPENDED` tension: `docs/audit-and-errors.md`. Workflow:
+the `audit-log-and-error-codes` skill.
+
 ### Multi-agent work
 
 For a feature spanning backend and frontend, or several services/slices at once, use the
