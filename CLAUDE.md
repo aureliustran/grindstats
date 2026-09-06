@@ -84,13 +84,25 @@ the `audit-log-and-error-codes` skill.
 
 ### Multi-agent work
 
-For a feature spanning backend and frontend, or several services/slices at once, use the
-`multi-agent-code-execution` skill (`.claude/skills/multi-agent-code-execution/`): one
-instructor agent writes the contract and partitions the work into slices with **disjoint
-file ownership**, then executors build against it in parallel without touching each other's
-paths or amending the contract. Don't fan out parallel agents without that partitioning
-step — two agents editing one file, or each inventing its own version of an API, is the
-failure it exists to prevent.
+For a feature spanning backend and frontend, or several services/slices at once, start
+from the `multi-agent-code-execution` skill (`.claude/skills/multi-agent-code-execution/`).
+It is a **four-phase pipeline with a gate between each phase**, and each phase is its own
+skill because each is done by a different role:
+
+1. `multi-agent-instruction` — one instructor freezes the contract, partitions the work
+   into slices with **disjoint file ownership**, writes one brief per executor. Writes no code.
+2. `multi-agent-execution` — many executors build their slice inside its allowlist, never
+   touching the contract or another slice's paths; stop and escalate if the contract is wrong.
+3. `multi-agent-testing` — testers who did not write the slice verify contract conformance,
+   the story's test cases and the end-to-end path; they file defect reports and **change no
+   source**.
+4. `multi-agent-bug-fixing` — fixers resolve triaged slice defects with a regression test
+   that failed first, inside a fix-brief allowlist, then hand back to testing for closure.
+
+Phases 3 and 4 loop until the exit criterion holds. Every run records its plan, briefs,
+reports, defects and fixes under `docs/stories/<CODE>-<slug>/`. Don't fan out parallel agents
+without phase 1, don't let the agent that built a slice sign off on testing it, and don't
+let a tester or fixer widen scope — each of those is the failure the split exists to prevent.
 
 ### Frontend: design system and i18n
 
