@@ -1,6 +1,6 @@
 ---
 name: multi-agent-instruction
-description: Phase 1 of the multi-agent pipeline — the single instructor agent that reads the spec and architecture docs, writes or amends the shared contract, partitions the feature into slices with disjoint file ownership, writes one self-contained brief per executor, and dispatches them in dependency order. Writes no feature code. Use when starting a multi-agent run (after reading `multi-agent-code-execution`), when an executor files an amendment request that needs a decision, or when a defect from testing turns out to be a contract or partition problem rather than a slice bug. Also use when a previous run had two agents editing one file, incompatible API assumptions, or colliding migration numbers — those are partitioning failures fixed here.
+description: Phase 1 of the multi-agent pipeline — the single instructor agent that reads the spec and architecture docs, writes or amends the shared contract, partitions the feature into slices with disjoint file ownership, maps every acceptance-criteria scenario to the slice and side (server/client) that must cover it with an automated test, writes one self-contained brief per executor, and dispatches them in dependency order. Writes no feature code. Use when starting a multi-agent run (after reading `multi-agent-code-execution`), when an executor files an amendment request that needs a decision, or when a defect from testing turns out to be a contract or partition problem rather than a slice bug. Also use when a previous run had two agents editing one file, incompatible API assumptions, or colliding migration numbers — those are partitioning failures fixed here.
 ---
 
 # Phase 1 — Instruction
@@ -22,9 +22,11 @@ Pipeline context, run folder layout and gates: `.claude/skills/multi-agent-code-
 Read, in this order, and don't skip to partitioning:
 
 1. The feature spec — a story under `docs/stories/<CODE>-<slug>/` if one exists (see the
-   `user-story-documentation` skill), or whatever the user provided. Read its
-   `test-cases.md` too: phase 3 will test against it, so the slices you cut had better
-   add up to something that can pass it.
+   `user-story-documentation` skill), or whatever the user provided. Read
+   `acceptance-criteria.md` scenario by scenario: each one becomes an automated test that
+   some slice must write in phase 2, so the slices you cut had better add up to something
+   that can cover all of them. `test-cases.md` maps scenarios to concrete test cases with
+   preconditions and data — that is what the executors' tests will encode.
 2. `docs/shared-contract.md` — what already crosses boundaries, and the standing policies
 3. `docs/backend.md` and/or `docs/frontend.md` — whichever domains this touches
 4. `docs/audit-and-errors.md` if the feature emits audit events or returns error codes —
@@ -106,6 +108,36 @@ Then order the slices explicitly in `plan.md`: what must be serial, what may run
 parallel, and what each waits on. Include the ownership map as a flat list of paths → slice
 so gate 1 can grep it for duplicates.
 
+## Step 4a: Map every acceptance-criteria scenario to a slice and a test
+
+Automated tests are written by executors in phase 2 as part of their slice, and they are
+derived from the acceptance criteria — so the partition has to say who tests what. Build an
+**AC coverage map** in `plan.md`:
+
+| Scenario (from `acceptance-criteria.md`) | Test cases | Slice | Side | Test kind |
+|---|---|---|---|---|
+| wrong password gives a generic failure without revealing which factor failed | TC-04 | AUTH-002-be-login | server | handler test: response body + status byte-identical to unknown-email case |
+| wrong password gives a generic failure ... | TC-04 | AUTH-002-fe-login-form | client | component test: renders the generic message key, no field is marked |
+
+Rules for the map:
+
+- **Every scenario appears.** A scenario nobody tests is a scenario nobody built. If you
+  can't place one, the partition has a hole — fix the partition.
+- **Test on the side where the *Then* is observable.** A server-observable *Then* (status,
+  body, audit row, cookie flags) is a server test; a client-observable *Then* (what renders,
+  what's disabled, which key is shown) is a client test. Many scenarios are both, and then
+  they appear twice, once per slice — each side tests its own half against the contract,
+  not against the other side's code.
+- **Name the kind, not the framework.** "handler test", "service unit test", "component
+  test", "hook test", "integration test with real DB". The executor picks the tool within
+  the conventions in `docs/backend.md` §7 / `docs/frontend.md` §7.
+- **Scenarios that are only observable end to end** (a real browser, both sides live) are
+  marked `e2e` and still assigned to a slice that owns the e2e spec file. They are the
+  minority; if most of your map says `e2e`, the seams are wrong or the AC is too coarse —
+  send it back through `user-story-documentation`.
+- Tests live inside the owning slice's allowlist. If the natural test location is outside
+  it, widen the allowlist in the plan now — not in the executor's head later.
+
 ## Step 5: Write a brief per slice
 
 One self-contained file per executor at `docs/stories/<CODE>-<slug>/briefs/<slice-id>.md`,
@@ -120,9 +152,11 @@ Each brief carries its own copy (or a precise link plus the relevant excerpt) of
 contract it implements against. "See the shared contract" is not enough — say which
 endpoints, which payloads, which error codes.
 
-Each brief names the story test cases its slice is expected to make pass. That is how the
-tester in phase 3 knows which slice to suspect, and how the executor knows what "done"
-means beyond its own unit tests.
+Each brief carries its slice's rows from the AC coverage map: which scenarios it must
+cover with automated tests, on which side, of what kind, and the test-case rows that give
+the data and preconditions. Those tests are part of the slice's deliverable — the brief's
+done-criteria list them by scenario, and the slice is not done with code alone. This is
+also how the tester in phase 3 knows which slice to suspect when a scenario fails.
 
 Include the stop condition verbatim in every brief:
 
@@ -180,5 +214,8 @@ suspect, they don't assign — then:
 - Let a slice start before its dependencies have reported done.
 - Accept "it should work" as a completion report. Gate 2 will reject it anyway; better to
   reject it at your desk.
+- Accept a slice as done without its scenario tests. "Tests will be added in the testing
+  phase" is a misunderstanding of the pipeline — phase 3 verifies tests, it doesn't write
+  them.
 - Quietly fix a slice that came back wrong and leave the brief describing something that
   didn't happen. Re-brief it. The briefs are the record of what was built.

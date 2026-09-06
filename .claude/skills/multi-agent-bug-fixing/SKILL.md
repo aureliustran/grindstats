@@ -40,6 +40,12 @@ you can't verify.
 
 ### 2. Write the regression test before the fix
 
+If the defect *is* a missing or too-weak scenario test (from the phase-3 coverage audit),
+this step is the whole fix: write the test the scenario describes, following "Tests from
+acceptance criteria" in `multi-agent-execution`. If it passes immediately, the code was
+right and the test was missing — say so and report. If it fails, you've found the bug it
+was supposed to catch; continue to step 3.
+
 Add a test that encodes the defect's **Expected** and fails against the current code for the
 reason the defect describes. Run it; paste the failing output into the fix brief. This is the
 half of the evidence that a passing test alone can't give: proof the test actually detects

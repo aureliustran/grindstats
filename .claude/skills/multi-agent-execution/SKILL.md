@@ -1,6 +1,6 @@
 ---
 name: multi-agent-execution
-description: Phase 2 of the multi-agent pipeline — the executor role. Load when you have been handed an executor brief (`docs/stories/<CODE>-<slug>/briefs/<slice-id>.md`) and are implementing one slice of a feature alongside other agents you cannot see. Covers the absolute rules (write only inside your allowlist, never edit the contract, never touch another slice's files, implement the brief not your preference), the stop-and-escalate protocol when the contract is wrong, the domain-specific rules for frontend/micro-frontend and backend/distributed-service slices, and the structured completion report. Not for planning (that's `multi-agent-instruction`), not for testing other slices (`multi-agent-testing`), not for fixing defects found after execution (`multi-agent-bug-fixing`).
+description: Phase 2 of the multi-agent pipeline — the executor role. Load when you have been handed an executor brief (`docs/stories/<CODE>-<slug>/briefs/<slice-id>.md`) and are implementing one slice of a feature alongside other agents you cannot see. Covers the absolute rules (write only inside your allowlist, never edit the contract, never touch another slice's files, implement the brief not your preference), how to turn each assigned acceptance-criteria scenario into an automated server or client test as part of the slice, the stop-and-escalate protocol when the contract is wrong, the domain-specific rules for frontend/micro-frontend and backend/distributed-service slices, and the structured completion report. Not for planning (that's `multi-agent-instruction`), not for testing other slices (`multi-agent-testing`), not for fixing defects found after execution (`multi-agent-bug-fixing`).
 ---
 
 # Phase 2 — Execution
@@ -20,7 +20,8 @@ than guessing:
 - [ ] an explicit write allowlist (paths, not descriptions)
 - [ ] the contract excerpt you implement against, not just a pointer
 - [ ] done-criteria with runnable commands
-- [ ] which story test cases your slice must make pass
+- [ ] the acceptance-criteria scenarios your slice must cover with automated tests, with
+      side, kind and location
 - [ ] the dependencies you wait on, and confirmation they have completed
 
 A brief missing any of these is a phase-1 defect. Starting anyway means you'll invent the
@@ -41,11 +42,15 @@ missing part, and your invention won't match the executor next to you.
 4. **Implement what the brief says, not what you'd have designed.** If the brief is wrong,
    that's an escalation, not a silent improvement. An executor that "improves" the design
    unilaterally breaks the assumptions three other executors are building on.
-5. **Verify before reporting done.** Run the commands in the brief's done-criteria and
-   whichever story test cases you can run in isolation. "It should work" is not a
-   completion report. This is *self-verification*, not the testing phase — it earns you
-   the right to report done, not a sign-off.
-6. **Report structurally, in the run folder.** What you changed, what you verified and
+5. **The scenario tests are part of the slice.** Your brief lists acceptance-criteria
+   scenarios with a side and a test kind; each one becomes an automated test you write,
+   inside your allowlist, as part of the same deliverable as the code. See "Tests from
+   acceptance criteria" below. Code without its scenario tests is an unfinished slice.
+6. **Verify before reporting done.** Run the commands in the brief's done-criteria,
+   including every scenario test. "It should work" is not a completion report. This is
+   *self-verification*, not the testing phase — it earns you the right to report done, not
+   a sign-off.
+7. **Report structurally, in the run folder.** What you changed, what you verified and
    how, what you could not do, and anything you noticed outside your scope (don't fix it —
    report it). Template at the bottom of your brief; write it to
    `docs/stories/<CODE>-<slug>/reports/<slice-id>.md`.
@@ -70,6 +75,38 @@ actual state.
 The same applies to a brief that is internally inconsistent, or that asks for something
 your allowlist can't reach: escalate to the instructor with the specific conflict. Don't
 resolve it by picking the interpretation you like.
+
+## Tests from acceptance criteria
+
+Each scenario row in your brief is a Given/When/Then statement from the story. Turn it into
+a test the same way, on the side your brief says:
+
+- **Name the test after the scenario**, verbatim or nearly — `TestLogin_WrongPasswordGivesGenericFailure`,
+  `it("wrong password gives a generic failure without revealing which factor failed")`.
+  Phase 3 audits coverage by matching scenario titles to test names; an unrecognisable
+  name reads as a missing test.
+- **Given** → the test's arrangement: fixtures, seeded rows, mocked API responses. Take
+  preconditions and test data from the linked `test-cases.md` rows rather than inventing
+  them, so the automated test and the manual test case agree.
+- **When** → one action: the request, the render + interaction, the function call.
+- **Then** → assert exactly what the scenario says is observable on *your* side, and
+  nothing about the other side's internals. A server test asserts status, body shape,
+  error code, cookie flags, audit row; a client test asserts what renders, which
+  translation key is used, what is disabled, what the API client was called with. Where the
+  scenario says two responses are identical (enumeration protection), assert byte-equality —
+  don't assert each one separately.
+- **Test against the contract, not against the other side.** Client tests mock the API at
+  the contract's shapes (`apps/web/src/api/*.types.ts`, generated types). Server tests call
+  the handler with contract-shaped requests. If you need the other slice's code to make your
+  test pass, the seam is wrong — escalate.
+- **Locale-sensitive *Then*s are tested in both `en-US` and `vi-VN`** on the server
+  (rendered message) and, on the client, by asserting the key rather than the text.
+- Follow the placement and tooling conventions in `docs/backend.md` §7 and
+  `docs/frontend.md` §7. If the right location is outside your allowlist, escalate — don't
+  put the test somewhere odd to stay inside it.
+
+Scenarios marked `e2e` in your brief are the exception: you write the spec file in the
+location your allowlist names, and it runs in phase 3 with both sides live.
 
 ## Domain-specific rules
 
@@ -98,7 +135,7 @@ did not watch you work. Make it checkable:
 1. **Changed:** files touched, and what each change does. The tester will diff this
    against your allowlist.
 2. **Verified:** commands run and their *actual* output — paste it, don't paraphrase.
-   Story test cases run, and their result.
+   One line per scenario in your brief: scenario → test name → pass/fail.
 3. **Could not do:** anything blocked, and why. An amendment you filed and are waiting on
    belongs here.
 4. **Noticed:** problems outside your scope. Report them; don't fix them. The tester will

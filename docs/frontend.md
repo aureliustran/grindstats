@@ -151,3 +151,42 @@ server-side from the `Accept-Language` header this app sends on every request.
 - `ERROR_MESSAGE_KEYS` is typed `Record<ErrorCode, string>`. Adding a code to the model
   breaks this app's type-check until someone decides what it should say — that break is the
   feature, not an obstacle.
+
+## 7. Automated tests
+
+Tests are written with the code, by the slice that owns the code, and each acceptance-criteria
+scenario the slice is assigned becomes at least one test. The testing phase of a multi-agent
+run audits that mapping (`.claude/skills/multi-agent-testing/`); it does not write the tests.
+
+**Tooling.** Vitest (it shares `vite.config.ts`) with `@testing-library/react` and
+`@testing-library/user-event` for component and hook tests; `jsdom` environment. End-to-end
+specs, for the minority of scenarios only observable with both sides live, use Playwright
+under `apps/web/e2e/` and run in the testing phase, not in the unit run.
+
+**Placement.** `*.test.ts(x)` beside the file under test, inside the same slice folder
+(`src/features/<slice>/…`). Nothing under `src/shared/` is tested from a feature folder and
+vice versa — the import rule (§3) applies to tests too.
+
+**Naming.** One `it(...)` per scenario, titled with the scenario verbatim:
+`it("wrong password gives a generic failure without revealing which factor failed", …)`.
+The coverage audit matches these titles against `acceptance-criteria.md`.
+
+**Assert what the user can observe.** Rendered text is asserted by **translation key**, not
+by English copy: render with a test i18n instance whose `t` returns the key, and assert
+`screen.getByText("auth.login.error.generic")`. That keeps tests locale-independent and
+catches a hardcoded string as a failure. Assert disabled states, focus, `aria-*`, and what
+the API client was called with — never component internals or state.
+
+**Mock at the contract.** API calls are mocked at the shapes in `src/api/*.types.ts` and
+the generated types, returning contract-shaped responses (including the error envelope and
+real error codes from `apps/web/src/api/generated/audit.ts`). A client test never runs
+against a real or in-repo backend; if it needs to, the seam is wrong — escalate.
+
+**Numbers and dates** in rendered output are asserted through the same `Intl` formatter the
+component uses (`formatNumber`, `formatDate` from `src/i18n/`), in both locales, so a raw
+`toFixed()` fails the test in `vi-VN` where the separators invert.
+
+**Design-system checks** that are cheap to automate go in the same test: the focus-visible
+ring exists on interactive elements, no inline style attribute carries a raw color/px/ms,
+and reduced-motion is respected. The rest of `docs/design-system.md` §7 is a manual pass in
+the testing phase.

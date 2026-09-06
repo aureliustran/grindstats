@@ -93,6 +93,9 @@ skill because each is done by a different role:
    into slices with **disjoint file ownership**, writes one brief per executor. Writes no code.
 2. `multi-agent-execution` — many executors build their slice inside its allowlist, never
    touching the contract or another slice's paths; stop and escalate if the contract is wrong.
+   **Automated tests are part of the slice**: every acceptance-criteria scenario the plan
+   assigns to the slice becomes a server and/or client test, written with the code
+   (`docs/backend.md` §7, `docs/frontend.md` §7).
 3. `multi-agent-testing` — testers who did not write the slice verify contract conformance,
    the story's test cases and the end-to-end path; they file defect reports and **change no
    source**.

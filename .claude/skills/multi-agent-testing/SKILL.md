@@ -48,17 +48,37 @@ failure mode this phase exists for, so check the seams first:
   message; the audit row written for it is `en-US` regardless
 - the checks in `docs/shared-contract.md` §5
 
-### 2. Story test cases
+### 2. Acceptance-criteria coverage audit
 
-Run every row of `docs/stories/<CODE>-<slug>/test-cases.md`. Record each ID as pass / fail
-/ blocked in `test-report.md`. A blocked case (can't be exercised because of an earlier
-failure) is recorded as blocked, not skipped and forgotten.
+The executors were required to write an automated test for every scenario in the AC
+coverage map (`plan.md`). Audit that before running anything by hand:
+
+- For each scenario, find the test(s) the brief promised, on each promised side. Match by
+  name. Missing → defect, `S2`, classified `slice` against the owning slice (or
+  `contract-or-partition` if the map never assigned it).
+- Read the test. Does its *Then* assert what the scenario says — the status *and* the
+  body *and* the cookie flags, byte-identical responses where the scenario says
+  "identical" — or does it assert something weaker that happens to pass? A test that
+  exists but doesn't encode the scenario is a missing test with better camouflage. File it
+  the same way, quoting the assertion and the scenario side by side.
+- Run the whole suite on both sides and record the scenario → test → result table in
+  `test-report.md`.
+
+You do not write the missing tests. That is the fixer's job in phase 4, with the defect
+report telling them exactly which scenario and which side.
+
+### 3. Story test cases
+
+Run every row of `docs/stories/<CODE>-<slug>/test-cases.md` that the automated suite doesn't
+already cover with an equivalent assertion — and spot-check a few that it does. Record each
+ID as pass / fail / blocked in `test-report.md`. A blocked case (can't be exercised because
+of an earlier failure) is recorded as blocked, not skipped and forgotten.
 
 For a failing case, the brief that named that test case tells you which slice to *suspect*.
 Write that down as a suspicion. Assignment is the instructor's job — the same symptom is
 often two slices each half-right about a seam.
 
-### 3. End-to-end user path
+### 4. End-to-end user path
 
 Build, migrate, start it, and walk the actual path from `story.md` as the user would,
 in both locales. Parallel slices that each work in isolation frequently fail on first
@@ -66,7 +86,7 @@ contact; this is where you find out. Check the design-system and i18n definition
 (`docs/design-system.md` §7, `docs/i18n-guidelines.md` §7) on the surfaces the feature
 touched — a hardcoded string or a `toFixed()` in the DOM is a defect, not a nitpick.
 
-### 4. Executor "noticed" items
+### 5. Executor "noticed" items
 
 Read the **Noticed** section of every report in `reports/`. An executor almost always sees
 the integration bug before integration does, and mentions it in passing. Reproduce each
@@ -136,6 +156,8 @@ you weigh, not a verdict.
 Phase 3 is done — and the run is done — when all of these hold at once:
 
 - no open `S1` or `S2` defects
+- every scenario in the AC coverage map has a passing automated test on every side the
+  map names, and the test asserts the scenario
 - every story test case is pass (not blocked)
 - contract conformance checks pass
 - the end-to-end path completes in both locales

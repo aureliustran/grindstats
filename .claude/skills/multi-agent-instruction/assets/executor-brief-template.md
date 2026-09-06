@@ -47,18 +47,24 @@ would most plausibly want to edit — that's where the collision would happen.>
 <The actual relevant excerpt, not just a pointer. Endpoints, payload shapes, error codes,
 event names and payloads. If it's long, link the schema AND state which parts apply.>
 
-## Story test cases this slice must make pass
+## Acceptance-criteria scenarios this slice covers with automated tests
 
-<IDs from `docs/stories/<CODE>-<slug>/test-cases.md`. Phase 3 tests against these and suspects
-this slice when they fail; you should run whichever of them you can before reporting done.>
+<Copied from the AC coverage map in `plan.md`. Each row is a test you write as part of this
+slice — the code is not done without it. The scenario text is the test's name; the linked
+test-case rows in `test-cases.md` give preconditions and data. Phase 3 verifies these exist
+and pass, and suspects this slice when a scenario fails.>
 
-- TC-<..>
+| Scenario | Test cases | Side | Test kind | Test location (inside your allowlist) |
+|---|---|---|---|---|
+| <scenario title verbatim from acceptance-criteria.md> | TC-<..> | server / client | <handler / unit / component / hook / integration / e2e> | `<path>` |
 
 ## Done when
 
 <Verifiable criteria plus the commands to prove them. "It works" is not a criterion.>
 
-- [ ] <behavioral criterion tied to the story's acceptance criteria>
+- [ ] Every scenario in the table above has an automated test, named after the scenario,
+      that asserts its *Then* clause — and passes
+- [ ] <any behavioral criterion not captured by a scenario>
 - [ ] Builds and type-checks: `<command>`
 - [ ] Tests pass: `<command>`
 - [ ] <domain-specific checks from the relevant reference file>
@@ -82,7 +88,8 @@ Continue any part of your slice that doesn't depend on the disputed shape.
 Write the report to `docs/stories/<CODE>-<slug>/reports/<slice-id>.md`.
 
 1. **Changed:** files touched, and what each change does
-2. **Verified:** which commands you ran and their results — not what you expect to pass
+2. **Verified:** which commands you ran and their results — not what you expect to pass.
+   Include a scenario → test → result line for every row in the scenarios table.
 3. **Could not do:** anything blocked, and why
 4. **Noticed:** problems outside your scope. **Report them, don't fix them** — a fix outside
    your allowlist collides with whoever owns that file.

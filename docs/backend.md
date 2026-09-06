@@ -191,3 +191,40 @@ emails, webhooks and future non-browser clients all need a localized message.
   not-clinical caveat attached in both code comments and user-facing copy
 - The numeral-validation guard on LLM output (every number in generated text must appear in
   the payload) is a checked invariant, not a hope
+
+## 7. Automated tests
+
+Tests are written with the code, by the slice that owns the code, and each acceptance-criteria
+scenario the slice is assigned becomes at least one test. The testing phase of a multi-agent
+run audits that mapping (`.claude/skills/multi-agent-testing/`); it does not write the tests.
+
+**Placement.** `*_test.go` beside the file under test, same package. Integration tests that
+need a database live in the domain's `internal/<domain>/…` tree too, gated behind a build
+tag or an env var (`GRINDSTATS_TEST_DB`) so `go test ./...` stays fast by default and the
+full run is one flag away. Migrations are tested by applying up and down against an empty
+database in CI — never by hand.
+
+**Naming.** One test per scenario, named after it:
+`TestLogin_WrongPasswordGivesGenericFailure`. Table-driven tests are fine for variants of
+*one* scenario; two scenarios never share a table — the coverage audit matches names to
+`acceptance-criteria.md` and a merged test hides a missing one.
+
+**Handlers** are tested through `net/http/httptest` against the Gin router with a
+contract-shaped request, asserting status, the error envelope and code, cookie attributes
+(`HttpOnly`, `Secure`, `SameSite`, `Path`), and — when the scenario mentions it — the
+audit row written. When a scenario says two responses are identical (enumeration
+protection), assert the raw bodies and statuses are byte-equal; asserting each
+independently proves nothing about the pair.
+
+**Services** are tested as plain functions with fakes for their interfaces
+(`docs/backend.md` §4); no HTTP, no DB. Physiology formulas in `libs/physiology/` are
+tested against the cited published values, not against themselves.
+
+**Locale.** Anything rendered from `libs/i18n/locales/` is asserted in both `en-US` and
+`vi-VN` by setting `Accept-Language` on the test request; the audit row written in the same
+test is asserted to be `en-US`. That is the three-planes rule (§5a) as a test.
+
+**No test reaches across the seam.** A backend test never imports frontend code or fixtures
+and never depends on the SPA's behavior. It tests against the contract; the SPA tests
+against the same contract from its side. Where the two disagree, the contract conformance
+checks in the testing phase catch it — not a test that happens to exercise both.

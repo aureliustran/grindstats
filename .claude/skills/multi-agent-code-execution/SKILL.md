@@ -13,8 +13,8 @@ it, and the agent that fixes it does not decide it is fixed.
 | # | Phase | Skill | Who | Produces |
 |---|-------|-------|-----|----------|
 | 1 | Instruction | `multi-agent-instruction` | exactly one instructor | frozen contract, slice partition, one brief per executor |
-| 2 | Execution | `multi-agent-execution` | many executors, one per slice | code inside each slice's allowlist, structured completion reports |
-| 3 | Testing | `multi-agent-testing` | testers who did not write the slice under test | test report, defect reports — **no code changes** |
+| 2 | Execution | `multi-agent-execution` | many executors, one per slice | code **and the automated tests for its acceptance-criteria scenarios** inside each slice's allowlist, structured completion reports |
+| 3 | Testing | `multi-agent-testing` | testers who did not write the slice under test | AC-coverage audit, contract conformance, end-to-end runs; test report and defect reports — **no code changes** |
 | 4 | Bug fixing | `multi-agent-bug-fixing` | fixers, one per triaged defect cluster | fixes with regression tests, then back to phase 3 |
 
 Phases 3 → 4 → 3 loop until the exit criterion in `multi-agent-testing` is met. Nothing
@@ -36,6 +36,21 @@ at a *boundary* between activities, not inside one:
 
 Putting the activities in one skill invites an agent to slide from one to the next without
 noticing. Separate skills with explicit gates make the slide a visible decision.
+
+## Tests are built in development, verified in testing
+
+The automated tests — server unit/integration tests and client unit/component tests — are
+**development work**, written in phases 1 and 2, not something the testing phase adds
+afterwards. They are derived from the story's acceptance criteria: every Gherkin scenario
+in `acceptance-criteria.md` is assigned to a slice in phase 1 and gets an automated test in
+phase 2, on whichever side of the seam (server, client, or both) the scenario's *Then*
+clause is observable.
+
+Phase 3 does not write those tests. It checks that they exist, that they assert what the
+scenario says, and that they pass — and then does the work automated tests can't: contract
+conformance across slices and the end-to-end path. A scenario with no automated test is a
+defect in its own right, filed against the slice that owned it (or against the partition,
+if none did).
 
 ## When this applies
 
@@ -87,6 +102,10 @@ previous phase's agent declaring itself done — that's the whole point.
 - [ ] Slice order is explicit: what runs first, what runs in parallel, what waits on what
 - [ ] One brief per slice exists and is self-contained (executable with no memory of the
       planning conversation)
+- [ ] `plan.md` has an **AC coverage map**: every scenario in `acceptance-criteria.md` →
+      the slice(s) that must cover it with an automated test, and on which side (server /
+      client / both). No scenario is unassigned; no scenario is "covered" only by the
+      end-to-end pass in phase 3
 
 ### Gate 2 — execution → testing
 
@@ -95,6 +114,9 @@ previous phase's agent declaring itself done — that's the whole point.
 - [ ] No open amendment requests — each one has an instructor decision, and every slice the
       decision names as "re-verify" has been re-verified (finished ones included)
 - [ ] Each executor's diff stays inside its allowlist (check the diff, not the report)
+- [ ] Every scenario in the AC coverage map has the automated test(s) the brief asked for,
+      named after the scenario, and the report shows them passing — a slice with code but
+      no scenario tests is not done
 - [ ] The whole thing builds from a clean checkout: backend compiles, frontend type-checks,
       generated files are current (`scripts/gen_audit_model.py --check`,
       `scripts/check_i18n_parity.py`)
