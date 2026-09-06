@@ -7,7 +7,7 @@
   },
   "landing": {
     "meta": {
-      "title": "GrindStats — theo dõi khối lượng tập, không phải cảm hứng",
+      "title": "GrindStats — theo dõi khối lượng đã tập, không phải tâm trạng",
       "description": "Chỉ số cơ thể, tập kháng lực và cardio, cùng nhật ký bữa ăn — đo lường nghiêm túc, mỗi ngày."
     },
     "nav": {
@@ -25,7 +25,7 @@
       "regimen_situps": "100 GẬP BỤNG",
       "regimen_squats": "100 SQUAT",
       "regimen_run": "CHẠY 10KM",
-      "punchline": "MỖI NGÀY, KHÔNG NGHỈ",
+      "punchline": "MỖI MỘT NGÀY",
       "aside": "(Chẳng ai bảo là nó thú vị cả.)",
       "subhead": "GrindStats ghi lại đúng những gì bạn đã làm, và tính toán một cách trung thực.",
       "cta_primary": "Bắt đầu theo dõi",
@@ -34,11 +34,11 @@
     "features": {
       "heading": "Những gì được đo",
       "metrics_title": "Chỉ số cơ thể",
-      "metrics_body": "Cân nặng, tỷ lệ mỡ, khối lượng cơ và số đo vòng, theo tần suất mà bạn thực sự duy trì được.",
+      "metrics_body": "Cân nặng, tỷ lệ mỡ, khối lượng cơ và số đo vòng, theo tần suất mà bạn thực sự duy trì.",
       "training_title": "Tập luyện",
       "training_body": "Kháng lực tính theo số set hiệu quả cho mỗi nhóm cơ. Cardio tính theo năng lượng tiêu hao, bao gồm cả phần đốt thêm sau buổi tập.",
       "nutrition_title": "Bữa ăn",
-      "nutrition_body": "Chụp đĩa thức ăn từ hai góc. Chỉnh lại ước lượng. Xong.",
+      "nutrition_body": "Chụp đĩa thức ăn từ hai góc. Chỉnh lại ước lượng. Đi tiếp.",
       "coaching_title": "Tư vấn",
       "coaching_body": "Lời khuyên dựa trên chính số liệu của bạn, kèm theo con số đứng sau mỗi đề xuất."
     },

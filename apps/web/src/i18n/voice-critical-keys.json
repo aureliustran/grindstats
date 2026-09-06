@@ -1,0 +1,11 @@
+{
+  "_comment": "Keys here carry a specific brand claim, not just UI copy. See docs/i18n-guidelines.md §2a: translate faithfully, never reinterpret into a locally punchier but different claim. Changes to these keys in any locale need sign-off from someone fluent in both the language and the intended meaning. Not loaded into i18next — reference only.",
+  "keys": [
+    "landing.hero.regimen_pushups",
+    "landing.hero.regimen_situps",
+    "landing.hero.regimen_squats",
+    "landing.hero.regimen_run",
+    "landing.hero.punchline",
+    "landing.hero.aside"
+  ]
+}

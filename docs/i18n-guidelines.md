@@ -82,6 +82,28 @@ Rules:
 
 ---
 
+## 2a. Voice-critical strings: translate faithfully, not "better"
+
+Some strings — the hero slogan, the punchline, anything that is the brand's
+voice rather than incidental UI copy — carry a specific claim, not just a
+vibe. "EVERY SINGLE DAY" is an intensified claim about frequency. A fluent
+but reinterpreted Vietnamese line that swaps in a different idea (e.g. one
+that claims "no rest" instead of "every day") is not a better translation —
+it's a different sentence that happens to sit in the same place.
+
+The failure mode here is specifically the opposite of the usual translation
+sin. Normally we worry about translations that are too literal and read as
+stilted. For a slogan, the temptation runs the other way: producing something
+that sounds punchier or more natural in Vietnamese by drifting from what the
+source actually asserts. Resist that. If the literal translation reads
+awkwardly, fix the awkwardness without changing the claim — don't reach for a
+locally punchier idea instead.
+
+Mark voice-critical keys as such (a comment in the source catalog, or list
+them in the story/PR that introduces them) so a future translator — human or
+agent — knows these specific strings need sign-off from someone fluent in
+both the language and the intended meaning, not just a fluency check.
+
 ## 3. Composing strings
 
 **Never build a sentence by concatenation.** Word order differs between English and
