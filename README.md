@@ -22,7 +22,7 @@ Qwen-backed RAG chatbot that proposes and adapts routines from your own data.
 | Messaging | RabbitMQ |
 | AI | Qwen (DashScope) — text + vision (Qwen-VL) |
 | Auth | JWT (RS256) + OAuth2 |
-| Deployment | Docker locally, AWS managed services in production |
+| Deployment | Docker locally · AWS in production — see [`docs/deployment-aws.md`](docs/deployment-aws.md) |
 
 ## What it does
 
@@ -60,6 +60,20 @@ Postgres installed directly on the host machine.
 
 See `CLAUDE.md` for repo conventions and structure, and `docs/adr/` for
 architecture decisions as they're made.
+
+## Deployment
+
+The blueprint's production target is ECS Fargate + RDS + ElastiCache +
+OpenSearch + Amazon MQ, which belongs to roadmap Phase 10 and costs roughly
+$150–200/month. What actually deploys today is deliberately much smaller: the
+SPA on S3 behind CloudFront, the Gin binary as a single Lambda behind the same
+distribution, and Postgres/Redis on external free tiers — about $0.01/month,
+released by GitHub Actions at no cost.
+
+[`docs/deployment-aws.md`](docs/deployment-aws.md) is authoritative for this,
+including which AWS services are deliberately avoided and what each would cost.
+**Read it before creating any AWS resource** — the free tier on this account has
+expired, so everything bills at full rate.
 
 ## Full blueprint
 
