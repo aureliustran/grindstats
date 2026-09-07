@@ -42,14 +42,19 @@ void i18n
       "en-US": { translation: enUS },
       "vi-VN": { translation: viVN },
     },
-    supportedLngs: SUPPORTED_LOCALES,
-    fallbackLng: DEFAULT_LOCALE,
-
-    // Maps any vi* tag (vi, vi-VN, vi-Hani-VN) onto our vi-VN catalog rather
-    // than falling through to English. Without this, a browser reporting plain
-    // "vi" silently gets the English UI.
-    load: "languageOnly",
+    // Bare language tags are accepted so a browser (or ?lng=vi) reporting plain
+    // "vi" or "en" resolves; the fallback map then routes each onto the ONE
+    // regional catalog we actually ship. Any other tag (fr-FR, ja) falls through
+    // to en-US. Do NOT use `load: "languageOnly"` here — it strips "en-US" to
+    // "en", which has no resource bundle, and every key renders raw.
+    supportedLngs: [...SUPPORTED_LOCALES, "en", "vi"],
     nonExplicitSupportedLngs: true,
+    load: "currentOnly",
+    fallbackLng: {
+      vi: ["vi-VN"],
+      en: ["en-US"],
+      default: [DEFAULT_LOCALE],
+    },
 
     detection: {
       // Order matters:

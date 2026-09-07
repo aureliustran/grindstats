@@ -1,24 +1,5 @@
 /* =============================================================================
    GrindStats — global base styles
-   =============================================================================
-
-   Import order matters. In src/main.tsx:
-
-       import "./styles/tokens.css";   // must come first — defines the values
-       import "./styles/globals.css";  // consumes them
-
-   What belongs in THIS file:
-     - the reset and base element styles
-     - anything that should be true everywhere without a class being applied
-     - @keyframes and the reduced-motion blanket rule
-     - rules a component author should not have to remember
-
-   What does NOT belong here:
-     - design values (they live in tokens.css)
-     - component-specific styling (Tailwind utilities in markup, or a
-       component-scoped .css file when the component genuinely needs plain CSS)
-
-   See docs/design-system.md §2 for the full Tailwind-vs-plain-CSS division.
    ============================================================================= */
 
 @tailwind base;
@@ -26,9 +7,7 @@
 @tailwind utilities;
 
 /* -----------------------------------------------------------------------------
-   RESET
-   Deliberately small. Tailwind's preflight already does most of the work; this
-   only adds what preflight leaves out or what our system needs differently.
+   RESET & BASE
    -------------------------------------------------------------------------- */
 
 *,
@@ -38,12 +17,8 @@
 }
 
 html {
-  /* Anchor-link scrolling for the landing page nav. The reduced-motion block
-     at the bottom of this file turns the smoothness off — do not remove that
-     override; motion sickness is a real accessibility failure, not a taste. */
   scroll-behavior: smooth;
-  /* Sticky header height, so an anchored section isn't hidden underneath it. */
-  scroll-padding-top: var(--space-16);
+  scroll-padding-top: 5rem;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -54,59 +29,42 @@ body {
   font-family: var(--font-body);
   font-size: var(--text-base);
   line-height: var(--leading-normal);
-  /* Slightly lighter rendering; keeps IBM Plex from looking heavy on dark. */
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  transition: background-color 0.3s, color 0.3s;
 }
-
-/* -----------------------------------------------------------------------------
-   TYPOGRAPHY BASE
-   -------------------------------------------------------------------------- */
 
 h1, h2, h3, h4 {
   margin: 0;
   color: var(--ink-0);
   font-weight: var(--weight-bold);
   line-height: var(--leading-tight);
-  /* Vietnamese words break differently than English and are on average longer.
-     Letting the browser hyphenate prevents a long vi-VN heading from
-     overflowing a container sized against its shorter English equivalent. */
   overflow-wrap: break-word;
 }
 
 p {
   margin: 0;
-  max-width: 68ch;  /* measure — longer lines are measurably harder to read */
 }
 
-/* The display face is for statements, not for reading. Anything set in it is
-   short by definition; if you find yourself setting a paragraph in it, the
-   paragraph is wrong or the face is. */
+/* Everything below is wrapped in Tailwind's "components" layer so that a
+   Tailwind utility class (e.g. `absolute`, `relative`) on the same element
+   always wins over these custom classes regardless of source order in this
+   file — without @layer, `.img-slot { position: relative }` (declared here,
+   textually after `@tailwind utilities`) would silently beat the `absolute`
+   utility at equal specificity and collapse the element to 0 height. This
+   bit the hero video backdrop (`img-slot hero-bg absolute inset-0`): the
+   video's `height: 100%` resolved against a 0-height, relatively-positioned
+   parent and rendered invisible. */
+@layer components {
+
 .u-display {
   font-family: var(--font-display);
   font-weight: var(--weight-black);
   line-height: var(--leading-display);
   letter-spacing: var(--tracking-tight);
   text-transform: uppercase;
-  /* Stacked Vietnamese diacritics (ế ộ ữ) exceed the em box at display sizes
-     and get clipped by tight containers. This headroom is why. */
   padding-block-start: 0.08em;
 }
-
-/* -----------------------------------------------------------------------------
-   NUMBERS — the most important rule in this file.
-
-   Every number the user reads goes in the mono face with TABULAR figures.
-   Proportional digits are variable-width, so columns go ragged and a value
-   that updates live visibly jitters as digits change. Apply .u-num to any
-   element containing a figure: a metric, a set count, a calorie total, an
-   axis label.
-
-   This handles rendering only. Locale-correct FORMATTING is a separate and
-   equally non-negotiable rule: every number goes through Intl.NumberFormat
-   with the active locale, because vi-VN inverts the separators — "2.620" means
-   2620 in Vietnamese, not 2.62. See docs/i18n-guidelines.md §4.
-   -------------------------------------------------------------------------- */
 
 .u-num {
   font-family: var(--font-mono);
@@ -114,24 +72,202 @@ p {
   font-feature-settings: "tnum" 1;
 }
 
-/* Estimated rather than measured. Never render an estimate as if it were a
-   measurement — see docs/design-system.md §1. The marker must be explainable
-   on hover/focus, so pair this class with an accessible description. */
-.u-estimated {
-  color: var(--low-confidence);
-  border-block-end: var(--border-hairline) dotted currentColor;
-  cursor: help;
+/* -----------------------------------------------------------------------------
+   AMBIENT LAYERS
+   -------------------------------------------------------------------------- */
+.grain, .u-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation: grain 8s steps(10) infinite;
+}
+
+@keyframes grain {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-3%, -5%); }
+  30% { transform: translate(4%, 2%); }
+  50% { transform: translate(-2%, 5%); }
+  70% { transform: translate(5%, -3%); }
+  90% { transform: translate(-4%, 1%); }
+}
+
+.ambient, .u-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -20;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at 80% -10%, var(--spot), transparent 60%),
+    radial-gradient(40rem 30rem at -10% 80%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%);
 }
 
 /* -----------------------------------------------------------------------------
-   FOCUS
-   :focus-visible, never :focus — mouse users shouldn't see rings they didn't
-   ask for, keyboard users must always see them. Never remove this outline
-   without replacing it with something meeting 3:1 against its background.
+   LIQUID GLASS
    -------------------------------------------------------------------------- */
+.glass, .glass-card, .u-glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  position: relative;
+}
+
+.glass-card::before, .u-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgb(255 255 255 / 0.18), transparent 40%, transparent 60%, rgb(255 255 255 / 0.06));
+}
+
+.glass-card {
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s;
+}
+
+.glass-card:hover {
+  box-shadow: var(--glass-shadow), 0 0 0 1px var(--glass-border);
+}
+
+/* Cursor spotlight (JS sets --mx/--my) */
+.spotlight, .u-spotlight {
+  position: relative;
+}
+
+.spotlight::after, .u-spotlight::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(22rem circle at var(--mx, 50%) var(--my, 50%), var(--spot), transparent 45%);
+  transition: opacity 0.3s;
+}
+
+.spotlight:hover::after, .u-spotlight:hover::after {
+  opacity: 1;
+}
+
+/* -----------------------------------------------------------------------------
+   TYPOGRAPHY HELPERS
+   -------------------------------------------------------------------------- */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.section-title {
+  margin-top: 0.75rem;
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  color: var(--ink-0);
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+.glow-text {
+  text-shadow: 0 0 40px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.estimated, .u-estimated {
+  color: var(--low-confidence);
+  border-bottom: 1px dotted currentColor;
+  cursor: help;
+  width: fit-content;
+}
+
+/* -----------------------------------------------------------------------------
+   BUTTONS & CONTROLS
+   -------------------------------------------------------------------------- */
+.btn-primary, .btn-ghost, .icon-btn, .nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 0.875rem;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  transition: transform 0.2s, background-color 0.2s, color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 8px 30px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--ink-0);
+  backdrop-filter: blur(10px);
+}
+
+.btn-ghost:hover {
+  background: var(--paper-2);
+}
+
+.btn-lg {
+  min-height: 3.25rem;
+  padding: 0 1.5rem;
+  font-size: 1rem;
+  border-radius: 1rem;
+}
+
+.icon-btn {
+  width: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0;
+  border-radius: 0.75rem;
+  color: var(--ink-1);
+  background: none;
+  border: 1px solid transparent;
+}
+
+.icon-btn:hover {
+  background: var(--paper-2);
+  border-color: var(--glass-border);
+}
+
+.nav-link {
+  color: var(--ink-2);
+  font-weight: 500;
+  padding: 0 0.85rem;
+  min-height: 2.5rem;
+  border-radius: 0.75rem;
+}
+
+.nav-link:hover, .nav-link.is-active {
+  color: var(--ink-0);
+  background: var(--paper-2);
+}
 
 :focus-visible {
-  outline: var(--border-heavy) solid var(--accent);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -139,91 +275,35 @@ p {
   outline: none;
 }
 
-/* -----------------------------------------------------------------------------
-   INTERACTIVE DEFAULTS
-   -------------------------------------------------------------------------- */
-
-a {
-  color: inherit;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.2em;
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
-button,
-[role="button"],
-a.u-target,
-input[type="submit"] {
-  /* Minimum hit area, even when the visual is smaller. Pad the target rather
-     than growing the icon. */
-  min-height: var(--target-min);
-  min-inline-size: var(--target-min);
+.skip-link, .u-skip-link {
+  position: absolute;
+  left: -999px;
+  top: 1rem;
+  z-index: 100;
+  background: var(--paper-0);
+  color: var(--ink-0);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
 }
 
-button {
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: none;
-  cursor: pointer;
+.skip-link:focus, .u-skip-link:focus-visible {
+  left: 1rem;
 }
 
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-  /* A disabled control must explain itself somewhere adjacent — a dead end
-     with no stated reason is a bug, not a state. */
-}
-
-img,
-svg {
-  display: block;
-  max-width: 100%;
-}
-
-/* -----------------------------------------------------------------------------
-   MOTION
-   Functional only: motion explains a state change or it doesn't exist.
-   -------------------------------------------------------------------------- */
-
-@keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes modal-enter {
-  from { opacity: 0; transform: translateY(var(--space-2)); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* The blanket reduced-motion rule. This catches CSS animation everywhere,
-   including components written by someone who forgot the requirement.
-
-   It does NOT catch JS-driven animation. A component animating in JS must
-   check window.matchMedia("(prefers-reduced-motion: reduce)") itself. There is
-   no way for this stylesheet to reach that code — which is exactly why it's
-   called out here rather than assumed. */
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* -----------------------------------------------------------------------------
-   UTILITIES
-   -------------------------------------------------------------------------- */
-
-/* Visually hidden but available to screen readers. Use for the skip link and
-   for text that gives an icon-only control its accessible name. Do NOT use
-   display:none for this — it removes the element from the accessibility tree. */
 .u-visually-hidden {
   position: absolute;
   width: 1px;
@@ -236,22 +316,531 @@ svg {
   border: 0;
 }
 
-/* Skip link — first focusable element on the page, visible only on focus. */
-.u-skip-link:focus-visible {
-  position: fixed;
-  inset-block-start: var(--space-2);
-  inset-inline-start: var(--space-2);
-  z-index: var(--z-toast);
-  width: auto;
-  height: auto;
-  padding: var(--space-3) var(--space-4);
-  clip-path: none;
-  background: var(--paper-0);
-  color: var(--ink-0);
-}
-
 .u-content {
   max-inline-size: var(--content-max);
   margin-inline: auto;
   padding-inline: var(--content-gutter);
 }
+
+/* -----------------------------------------------------------------------------
+   IMAGE SLOTS (replace with <img>)
+   -------------------------------------------------------------------------- */
+.img-slot {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  background:
+    linear-gradient(135deg, var(--paper-2), var(--paper-3)),
+    repeating-linear-gradient(45deg, transparent 0 14px, rgb(0 0 0 / 0.04) 14px 16px);
+  background-blend-mode: multiply;
+}
+
+.img-slot > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.img-slot__label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  font: 500 0.7rem/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  border: 1px dashed var(--ink-3);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--paper-1);
+}
+
+.img-slot:has(img) .img-slot__label {
+  display: none;
+}
+
+/* -----------------------------------------------------------------------------
+   HERO CHECKLIST CARD
+   -------------------------------------------------------------------------- */
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.75rem;
+  font-weight: 500;
+  color: var(--ink-1);
+  border: 1px solid transparent;
+}
+
+.check-row.is-done {
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
+
+.check-row.is-done svg {
+  color: var(--accent);
+}
+
+.check-row.is-active {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--ink-0);
+}
+
+.progress {
+  width: 0;
+  transition: width 1.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.is-visible .progress, .u-is-visible .progress {
+  width: var(--to);
+}
+
+.tilt {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* -----------------------------------------------------------------------------
+   TICKER
+   -------------------------------------------------------------------------- */
+.ticker, .u-ticker {
+  overflow: hidden;
+  -webkit-mask: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  mask: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+
+.ticker__track, .u-ticker__track {
+  display: flex;
+  gap: 2.5rem;
+  width: max-content;
+  animation: ticker 28s linear infinite;
+}
+
+.ticker__track .dot, .u-ticker__track .dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+  align-self: center;
+}
+
+@keyframes ticker {
+  to { transform: translateX(-50%); }
+}
+
+/* -----------------------------------------------------------------------------
+   FEATURES
+   -------------------------------------------------------------------------- */
+.feature h3 {
+  margin-top: 1rem;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--ink-0);
+}
+
+.feature p {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+
+.feature__icon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.feature__meta {
+  margin-top: 1rem !important;
+  font-size: 0.75rem !important;
+  color: var(--ink-3) !important;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 0.75rem;
+}
+
+/* -----------------------------------------------------------------------------
+   STEPS
+   -------------------------------------------------------------------------- */
+.step {
+  position: relative;
+}
+
+.step__shot {
+  aspect-ratio: 4/5;
+}
+
+.step__num {
+  margin-top: 1.25rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+}
+
+.step h3 {
+  margin-top: 0.25rem;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--ink-0);
+}
+
+.step p {
+  margin-top: 0.5rem;
+  color: var(--ink-2);
+}
+
+/* -----------------------------------------------------------------------------
+   STATS
+   -------------------------------------------------------------------------- */
+.stat {
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  background: var(--paper-0);
+  border: 1px solid var(--glass-border);
+}
+
+.stat dt {
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+.stat dd {
+  margin-top: 0.25rem;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--ink-0);
+}
+
+.stat dd small {
+  margin-left: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.stat--accent {
+  background: color-mix(in srgb, var(--accent) 10%, var(--paper-0));
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.stat--accent dd {
+  color: var(--accent);
+}
+
+/* -----------------------------------------------------------------------------
+   PRICING
+   -------------------------------------------------------------------------- */
+.price h3 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--ink-0);
+}
+
+.price__amt {
+  margin-top: 0.5rem;
+  font-size: 3rem;
+  font-weight: 600;
+  color: var(--ink-0);
+}
+
+.price__amt small {
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  margin-left: 0.25rem;
+}
+
+.price ul {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  color: var(--ink-1);
+}
+
+.price li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.price li svg {
+  color: var(--accent);
+  flex: none;
+}
+
+.price li.muted {
+  color: var(--ink-3);
+}
+
+.price li.muted svg {
+  color: var(--ink-3);
+}
+
+.price--featured {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: var(--glass-shadow), 0 0 80px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* -----------------------------------------------------------------------------
+   HERO BACKGROUND VIDEO (image slot 1)
+   -------------------------------------------------------------------------- */
+.hero-bg {
+  background: #000;
+}
+
+.hero-bg__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.15) brightness(0.38);
+  opacity: 0.7;
+}
+
+.hero-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.35), rgb(0 0 0 / 0.55) 55%, rgb(0 0 0 / 0.8));
+}
+
+.hero-bg--fallback {
+  background:
+    linear-gradient(135deg, var(--paper-2), var(--paper-3)),
+    repeating-linear-gradient(45deg, transparent 0 14px, rgb(0 0 0 / 0.04) 14px 16px);
+  background-blend-mode: multiply;
+}
+
+.hero-bg--fallback .hero-bg__video {
+  display: none;
+}
+
+/* -----------------------------------------------------------------------------
+   PINTEREST EMBED (image slot 5)
+   -------------------------------------------------------------------------- */
+.pin-embed-wrap {
+  width: 100%;
+  max-width: 345px;
+  aspect-ratio: 345 / 714;
+  overflow: hidden;
+  border-radius: 1.5rem;
+}
+
+.pin-embed {
+  position: relative;
+  width: 345px;
+  height: 714px;
+  transform-origin: top left;
+}
+
+.pin-embed iframe {
+  display: block;
+  border: 0;
+  filter: grayscale(1) contrast(1.05);
+}
+
+/* -----------------------------------------------------------------------------
+   PRICING SIDE ART (image slot 7)
+   -------------------------------------------------------------------------- */
+.pricing-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  filter: grayscale(1) contrast(1.08) brightness(var(--pricing-art-brightness, 1));
+}
+
+.dark .pricing-art img,
+:root[data-theme="dark"] .pricing-art img {
+  --pricing-art-brightness: 0.92;
+}
+
+.pricing-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent 65%, color-mix(in srgb, var(--paper-1) 70%, transparent) 100%),
+    linear-gradient(0deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 30%);
+}
+
+/* -----------------------------------------------------------------------------
+   MODAL
+   -------------------------------------------------------------------------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.5);
+  backdrop-filter: blur(6px);
+  animation: modal-fade 0.25s both;
+}
+
+.modal__panel {
+  width: 100%;
+  max-width: 26rem;
+  animation: modal-pop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-pop {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.segmented {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0.25rem;
+  border-radius: 0.9rem;
+  background: var(--paper-2);
+}
+
+.segmented [role="tab"] {
+  position: relative;
+  z-index: 1;
+  min-height: 2.5rem;
+  border-radius: 0.7rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.segmented [role="tab"][aria-selected="true"] {
+  color: var(--ink-0);
+}
+
+.segmented__thumb {
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: 0.25rem;
+  width: calc(50% - 0.25rem);
+  border-radius: 0.7rem;
+  background: var(--paper-0);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.12);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.segmented[data-active="signup"] .segmented__thumb {
+  transform: translateX(100%);
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ink-1);
+}
+
+.field__input {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0 0.9rem;
+  min-height: 3rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--glass-border);
+  background: var(--paper-0);
+  color: var(--ink-3);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.field__input:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.field__input input {
+  flex: 1;
+  background: none;
+  border: 0;
+  outline: 0;
+  color: var(--ink-0);
+  font: inherit;
+}
+
+/* -----------------------------------------------------------------------------
+   SCROLL REVEAL
+   -------------------------------------------------------------------------- */
+.reveal, .u-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition-delay: var(--d, var(--reveal-delay, 0ms));
+}
+
+.reveal.is-visible, .u-reveal.u-is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* -----------------------------------------------------------------------------
+   REDUCED MOTION
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .grain, .u-grain, .ticker__track, .u-ticker__track {
+    animation: none !important;
+  }
+
+  .reveal, .u-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .tilt, .magnetic {
+    transform: none !important;
+  }
+
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+} /* @layer components */

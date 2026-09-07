@@ -1,0 +1,249 @@
+/* =============================================================================
+   GrindStats — static design template
+   Tokens mirror apps/web/src/styles/tokens.css so this can be ported 1:1.
+   ============================================================================= */
+
+:root {
+  --paper-0: #ffffff; --paper-1: #f6f6f4; --paper-2: #ebebe7; --paper-3: #dcdcd6;
+  --ink-0: #0a0a0a; --ink-1: #2a2a28; --ink-2: #55554f; --ink-3: #85857c;
+  --accent: #d92c0d; --accent-hover: #b52309; --accent-ink: #ffffff;
+  --low-confidence: #8a5a00;
+  --glass-bg: rgb(255 255 255 / 0.55);
+  --glass-border: rgb(255 255 255 / 0.7);
+  --glass-shadow: 0 10px 40px rgb(0 0 0 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.8);
+  --spot: rgb(217 44 13 / 0.18);
+}
+.dark {
+  --paper-0: #141413; --paper-1: #0a0a0a; --paper-2: #1e1e1c; --paper-3: #2e2e2b;
+  --ink-0: #fafaf7; --ink-1: #e6e6e1; --ink-2: #a3a39b; --ink-3: #6e6e66;
+  --accent: #ff5a3c; --accent-hover: #ff7a60; --accent-ink: #0a0a0a;
+  --low-confidence: #d9a441;
+  --glass-bg: rgb(30 30 28 / 0.45);
+  --glass-border: rgb(255 255 255 / 0.12);
+  --glass-shadow: 0 20px 60px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.08);
+  --spot: rgb(255 90 60 / 0.22);
+}
+
+html { scroll-behavior: smooth; }
+body { transition: background-color .3s, color .3s; }
+
+/* ---------- Ambient layers ---------- */
+.grain {
+  position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: .07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation: grain 8s steps(10) infinite;
+}
+@keyframes grain { 0%,100%{transform:translate(0,0)} 10%{transform:translate(-3%,-5%)} 30%{transform:translate(4%,2%)} 50%{transform:translate(-2%,5%)} 70%{transform:translate(5%,-3%)} 90%{transform:translate(-4%,1%)} }
+
+.ambient {
+  position: fixed; inset: 0; z-index: -20; pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at 80% -10%, var(--spot), transparent 60%),
+    radial-gradient(40rem 30rem at -10% 80%, rgb(217 44 13 / .08), transparent 60%);
+}
+
+/* ---------- Liquid glass ---------- */
+.glass, .glass-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  position: relative;
+}
+.glass-card::before { /* refracted highlight */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(135deg, rgb(255 255 255 / .18), transparent 40%, transparent 60%, rgb(255 255 255 / .06));
+}
+.glass-card { transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s; }
+.glass-card:hover { box-shadow: var(--glass-shadow), 0 0 0 1px var(--glass-border); }
+
+/* Cursor spotlight (JS sets --mx/--my) */
+.spotlight::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+  background: radial-gradient(22rem circle at var(--mx, 50%) var(--my, 50%), var(--spot), transparent 45%);
+  transition: opacity .3s;
+}
+.spotlight:hover::after { opacity: 1; }
+
+/* ---------- Typography helpers ---------- */
+.eyebrow { display: inline-flex; align-items: center; gap: .5rem; font-family: "IBM Plex Mono", monospace; font-size: .75rem; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); }
+.section-title { margin-top: .75rem; font-family: "Big Shoulders Display", sans-serif; font-weight: 900; text-transform: uppercase; line-height: .95; letter-spacing: -.01em; color: var(--ink-0); font-size: clamp(2.5rem, 6vw, 4.5rem); }
+.glow-text { text-shadow: 0 0 40px color-mix(in srgb, var(--accent) 55%, transparent); }
+.estimated { color: var(--low-confidence); border-bottom: 1px dotted currentColor; cursor: help; width: fit-content; }
+
+/* ---------- Buttons ---------- */
+.btn-primary, .btn-ghost, .icon-btn, .nav-link {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  font-weight: 600; font-size: .875rem; border-radius: .875rem; min-height: 2.75rem; padding: 0 1.1rem;
+  transition: transform .2s, background-color .2s, color .2s, box-shadow .2s;
+  cursor: pointer;
+}
+.btn-primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 8px 30px color-mix(in srgb, var(--accent) 40%, transparent); }
+.btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.btn-ghost { border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--ink-0); backdrop-filter: blur(10px); }
+.btn-ghost:hover { background: var(--paper-2); }
+.btn-lg { min-height: 3.25rem; padding: 0 1.5rem; font-size: 1rem; border-radius: 1rem; }
+.icon-btn { width: 2.5rem; min-height: 2.5rem; padding: 0; border-radius: .75rem; color: var(--ink-1); border: 1px solid transparent; }
+.icon-btn:hover { background: var(--paper-2); border-color: var(--glass-border); }
+.nav-link { color: var(--ink-2); font-weight: 500; padding: 0 .85rem; min-height: 2.5rem; border-radius: .75rem; }
+.nav-link:hover, .nav-link.is-active { color: var(--ink-0); background: var(--paper-2); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.badge { display: inline-flex; align-items: center; gap: .35rem; border-radius: 999px; padding: .35rem .7rem; font-size: .75rem; font-weight: 600; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+
+.skip-link { position: absolute; left: -999px; top: 1rem; z-index: 100; background: var(--paper-0); color: var(--ink-0); padding: .5rem 1rem; border-radius: .5rem; }
+.skip-link:focus { left: 1rem; }
+
+/* ---------- Image slots (replace with <img>) ---------- */
+.img-slot {
+  position: relative; overflow: hidden; border-radius: 1.5rem;
+  background:
+    linear-gradient(135deg, var(--paper-2), var(--paper-3)),
+    repeating-linear-gradient(45deg, transparent 0 14px, rgb(0 0 0 / .04) 14px 16px);
+  background-blend-mode: multiply;
+}
+.img-slot > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.img-slot__label { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); white-space: nowrap; font: 500 .7rem/1 "IBM Plex Mono", monospace; letter-spacing: .08em; color: var(--ink-3); border: 1px dashed var(--ink-3); padding: .5rem .75rem; border-radius: .5rem; background: var(--paper-1); }
+.img-slot:has(img) .img-slot__label { display: none; }
+
+/* ---------- Hero checklist card ---------- */
+.check-row { display: flex; align-items: center; gap: .75rem; padding: .6rem .75rem; border-radius: .75rem; font-weight: 500; color: var(--ink-1); border: 1px solid transparent; }
+.check-row.is-done { color: var(--ink-3); text-decoration: line-through; }
+.check-row.is-done svg { color: var(--accent); }
+.check-row.is-active { border-color: color-mix(in srgb, var(--accent) 35%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--ink-0); }
+.progress { width: 0; transition: width 1.4s cubic-bezier(.2,.8,.2,1); }
+.is-visible .progress { width: var(--to); }
+
+.tilt { transform-style: preserve-3d; will-change: transform; }
+
+/* ---------- Ticker ---------- */
+.ticker { overflow: hidden; -webkit-mask: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); mask: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
+.ticker__track { display: flex; gap: 2.5rem; width: max-content; animation: ticker 28s linear infinite; }
+.ticker__track .dot { width: .5rem; height: .5rem; border-radius: 999px; background: var(--accent); align-self: center; }
+@keyframes ticker { to { transform: translateX(-50%); } }
+
+/* ---------- Features ---------- */
+.feature h3 { margin-top: 1rem; font-family: "Big Shoulders Display", sans-serif; font-size: 1.6rem; font-weight: 900; text-transform: uppercase; color: var(--ink-0); }
+.feature p { margin-top: .5rem; font-size: .9rem; color: var(--ink-2); }
+.feature__icon { display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: .9rem; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.feature__meta { margin-top: 1rem !important; font-size: .75rem !important; color: var(--ink-3) !important; border-top: 1px solid var(--glass-border); padding-top: .75rem; }
+
+/* ---------- Steps ---------- */
+.step { position: relative; }
+.step__shot { aspect-ratio: 4/5; }
+.step__num { margin-top: 1.25rem; font-size: .8rem; letter-spacing: .2em; color: var(--accent); }
+.step h3 { margin-top: .25rem; font-family: "Big Shoulders Display", sans-serif; font-size: 2rem; font-weight: 900; text-transform: uppercase; color: var(--ink-0); }
+.step p { margin-top: .5rem; color: var(--ink-2); }
+
+/* ---------- Stats ---------- */
+.stat { border-radius: 1rem; padding: 1rem 1.1rem; background: var(--paper-0); border: 1px solid var(--glass-border); }
+.stat dt { font-size: .75rem; color: var(--ink-2); }
+.stat dd { margin-top: .25rem; font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; font-size: 1.75rem; font-weight: 600; color: var(--ink-0); }
+.stat dd small { margin-left: .35rem; font-size: .75rem; font-weight: 400; color: var(--ink-2); }
+.stat--accent { background: color-mix(in srgb, var(--accent) 10%, var(--paper-0)); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.stat--accent dd { color: var(--accent); }
+
+/* ---------- Pricing ---------- */
+.price h3 { font-family: "Big Shoulders Display", sans-serif; font-size: 2rem; font-weight: 900; text-transform: uppercase; color: var(--ink-0); }
+.price__amt { margin-top: .5rem; font-size: 3rem; font-weight: 600; color: var(--ink-0); }
+.price__amt small { font-size: .9rem; color: var(--ink-2); margin-left: .25rem; }
+.price ul { margin-top: 1.5rem; display: grid; gap: .6rem; font-size: .9rem; color: var(--ink-1); }
+.price li { display: flex; align-items: center; gap: .6rem; }
+.price li svg { color: var(--accent); flex: none; }
+.price li.muted { color: var(--ink-3); }
+.price li.muted svg { color: var(--ink-3); }
+.price--featured { border-color: color-mix(in srgb, var(--accent) 45%, transparent); box-shadow: var(--glass-shadow), 0 0 80px color-mix(in srgb, var(--accent) 25%, transparent); }
+
+/* ---------- Hero background video (image slot 1) ---------- */
+.hero-bg { background: #000; } /* letterboxing behind the video, not the diagonal placeholder fill */
+.hero-bg__video {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  /* Fully desaturated + heavily darkened: source footage has bright
+     flash/VFX frames that would otherwise wash out the regimen type
+     unpredictably as it loops. The accent stays the only saturated color. */
+  filter: grayscale(1) contrast(1.15) brightness(.38);
+  opacity: .7;
+}
+/* Fixed dark scrim, independent of the light/dark theme gradient below it —
+   the hero must stay legible through the video's brightest frames whichever
+   theme is active. */
+.hero-bg::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgb(0 0 0 / .35), rgb(0 0 0 / .55) 55%, rgb(0 0 0 / .8));
+}
+/* If media/saitama-vs-garou.mp4 is missing in a given checkout, fall back to
+   the same diagonal placeholder fill the other empty slots use. */
+.hero-bg--fallback {
+  background:
+    linear-gradient(135deg, var(--paper-2), var(--paper-3)),
+    repeating-linear-gradient(45deg, transparent 0 14px, rgb(0 0 0 / .04) 14px 16px);
+  background-blend-mode: multiply;
+}
+.hero-bg--fallback .hero-bg__video { display: none; }
+
+/* ---------- Pinterest embed (image slot 5) ---------- */
+/* Native size is fixed (345×714 — Pinterest's, not ours). The wrapper caps at
+   that width and scales down on narrower columns; app.js sets --pin-scale and
+   the compensating wrapper height so the iframe never overflows or gets
+   cropped. Above 345px available width it renders at native size, unscaled. */
+.pin-embed-wrap { width: 100%; max-width: 345px; aspect-ratio: 345 / 714; overflow: hidden; border-radius: 1.5rem; }
+.pin-embed {
+  position: relative;
+  width: 345px; height: 714px;
+  transform-origin: top left;
+}
+.pin-embed iframe { display: block; border: 0; filter: grayscale(1) contrast(1.05); }
+
+/* ---------- Pricing side art (image slot 7) ---------- */
+.pricing-art img {
+  width: 100%; height: 100%; object-fit: cover; object-position: top;
+  /* Source art is already high-contrast B/W; this only normalizes it against
+     the surrounding cards — dark theme reads it near-neutral, light theme
+     pulls it slightly warm so it doesn't look like a stray dark rectangle
+     next to off-white cards. Grayscale stays 1 in both: the accent glow
+     behind the frame is the only color this section should carry. */
+  filter: grayscale(1) contrast(1.08) brightness(var(--pricing-art-brightness, 1));
+}
+.dark .pricing-art img { --pricing-art-brightness: 0.92; }
+.pricing-art::after {
+  /* Ties the frame into the same accent glow as the blurred backdrop behind
+     it, and fades the bottom edge into the card grid rather than cutting
+     off sharply. */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent 65%, color-mix(in srgb, var(--paper-1) 70%, transparent) 100%),
+    linear-gradient(0deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 30%);
+}
+
+/* ---------- Modal ---------- */
+.modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 1rem; }
+.modal.hidden { display: none; }
+.modal__backdrop { position: absolute; inset: 0; background: rgb(0 0 0 / .5); backdrop-filter: blur(6px); animation: fade .25s both; }
+.modal__panel { width: 100%; max-width: 26rem; animation: pop .35s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes fade { from { opacity: 0 } }
+@keyframes pop { from { opacity: 0; transform: translateY(12px) scale(.98) } }
+
+.segmented { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: .25rem; border-radius: .9rem; background: var(--paper-2); }
+.segmented [role=tab] { position: relative; z-index: 1; min-height: 2.5rem; border-radius: .7rem; font-weight: 600; font-size: .875rem; color: var(--ink-2); }
+.segmented [role=tab][aria-selected=true] { color: var(--ink-0); }
+.segmented__thumb { position: absolute; top: .25rem; bottom: .25rem; left: .25rem; width: calc(50% - .25rem); border-radius: .7rem; background: var(--paper-0); box-shadow: 0 2px 10px rgb(0 0 0 / .12); transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+.segmented[data-active=signup] .segmented__thumb { transform: translateX(100%); }
+
+.field { display: grid; gap: .4rem; font-size: .875rem; font-weight: 500; color: var(--ink-1); }
+.field__input { display: flex; align-items: center; gap: .6rem; padding: 0 .9rem; min-height: 3rem; border-radius: .9rem; border: 1px solid var(--glass-border); background: var(--paper-0); color: var(--ink-3); transition: box-shadow .2s, border-color .2s; }
+.field__input:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
+.field__input input { flex: 1; background: none; border: 0; outline: 0; color: var(--ink-0); font: inherit; }
+
+/* ---------- Scroll reveal ---------- */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s cubic-bezier(.2,.8,.2,1), transform .7s cubic-bezier(.2,.8,.2,1); transition-delay: var(--d, 0ms); }
+.reveal.is-visible { opacity: 1; transform: none; }
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .grain, .ticker__track { animation: none; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .tilt, .magnetic { transform: none !important; }
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

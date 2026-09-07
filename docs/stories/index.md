@@ -7,7 +7,7 @@ before assigning the next one.
 
 | Code | Slug | Summary | Status |
 |------|------|---------|--------|
-| [LAND-001](LAND-001-public-landing-page/story.md) | public-landing-page | Landing page for unauthenticated visitors: daily-regimen hero, marketing menu, and an auth modal with email/password and Google sign-in | draft |
+| [LAND-001](LAND-001-public-landing-page/story.md) | public-landing-page | Landing page for unauthenticated visitors: daily-regimen hero, marketing menu, and an auth modal with email/password and Google sign-in | frontend implemented against a mock auth client (run 1, 2026-09-06); backend pending — see [contract.md](LAND-001-public-landing-page/contract.md) |
 
 ## Epic: Authentication & session management
 

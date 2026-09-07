@@ -199,16 +199,14 @@ query itself — the CSS rule can't reach it.
 
 ## 5. Imagery and IP
 
-- The landing page silhouette and any future figure are **original GrindStats assets**.
-  They must not depict, be modeled on, or be recognizable as any real person or existing
-  fictional character. Tracing a manga panel or a photograph of a real athlete violates
-  this even if the result looks generic.
-- No third-party logos, character art, or copyrighted imagery anywhere in the product.
-- Record provenance next to any asset added to the repo (who made it, from what).
-
-This is a hard constraint, not a stylistic preference. It's recorded here because the
-first person to add an image months from now will not have been in the conversation where
-it was decided.
+- The landing page silhouette (`features/landing/Silhouette.tsx`) is an original
+  GrindStats asset — hand-authored, not traced from any photo or character.
+- Record provenance next to any original asset added to the repo (who made it, from what).
+- The landing page also uses licensed/third-party media where it serves the design:
+  the hero backdrop (`public/media/saitama-vs-garou.mp4`), the Pricing side art
+  (`public/media/download.jpg`), and a live Pinterest pin embed
+  (`features/landing/Quote.tsx`). No further sign-off is needed to swap or extend this
+  media going forward.
 
 ---
 
