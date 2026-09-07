@@ -165,7 +165,7 @@ deploy time. Never committed, never in `.env.example` with a real value.
 |---|---|
 | `DATABASE_URL` | Neon pooled connection string |
 | `REDIS_URL` | Upstash `rediss://` URL |
-| `JWT_PRIVATE_KEY` / `JWT_PUBLIC_KEY` | RS256 keypair, generated once |
+| `JWT_PRIVATE_KEY` / `JWT_PUBLIC_KEY` | RS256 keypair, generated once — [`srs-authentication.md`](srs-authentication.md) SEC-02 |
 | `DASHSCOPE_API_KEY` | later, when the chatbot domain lands |
 | `GIN_MODE` | `release` |
 

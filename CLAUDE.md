@@ -32,9 +32,12 @@ other way around.
 - **Auth**: JWT (RS256) + OAuth2, statelessness resolved via a Redis
   blacklist strategy (per-token `blacklist:{jti}` + per-user
   `user_blacklist_epoch:{user_id}` for O(1) logout-everywhere)
-- **Infra**: Docker Compose locally; AWS managed services in prod (ECS
-  Fargate, RDS, ElastiCache, OpenSearch Service, Amazon MQ, S3+CloudFront) —
-  no Terraform/CDK, high-level guidance only
+- **Infra**: Docker Compose locally. In prod, **target** (blueprint §18, Phase 10+)
+  is AWS managed services — ECS Fargate, RDS, ElastiCache, OpenSearch Service,
+  Amazon MQ, S3+CloudFront — but what actually deploys today is a single Lambda
+  behind CloudFront with external Postgres/Redis, because this account's free
+  tier has expired and the target shape costs ~$150–200/month. See
+  `docs/deployment-aws.md`; no Terraform/CDK, high-level guidance only
 
 ## Non-negotiable conventions
 
@@ -187,7 +190,7 @@ grindstats/
 │                                 # subscription, notification, user)
 ├── libs/                        # shared Go modules (authmw, eventbus,
 │                                 # qwenclient, physiology, httpkit)
-├── infra/                       # docker/, ci/
+├── infra/                       # docker/, ci/, aws/ (bootstrap + deploy)
 └── docs/adr/                    # architecture decision records
 ```
 
@@ -204,3 +207,8 @@ grindstats/
   keep that caveat attached in both code comments and any user-facing copy).
 - Run local dev via the root `docker-compose.yml`; don't require AWS access
   for anything in local development.
+- **Before creating any AWS resource, read `docs/deployment-aws.md`.** The free
+  tier on this account has expired, so every resource bills at full rate — an
+  ALB is ~$16/month, a NAT gateway ~$32, RDS or ElastiCache ~$12 each. That
+  document lists what is used, what is deliberately avoided, and why. Don't
+  introduce a service it doesn't cover without pricing it first.

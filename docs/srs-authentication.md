@@ -78,8 +78,9 @@ downstream service packages verify signature only and never call Redis
 
 ### 2.3 Assumptions and dependencies
 - Redis is available to the gateway; PostgreSQL stores accounts.
-- TLS terminates in front of the gateway (CloudFront/ALB in prod, local
-  compose is trusted-dev only).
+- TLS terminates in front of the gateway (**CloudFront** in prod — there is no
+  ALB in the current deployment, see [`deployment-aws.md`](deployment-aws.md);
+  local compose is trusted-dev only).
 - Password hashing and key management follow §5 (security requirements).
 - The signing keypair is available to the auth package (private) and to all
   verifying services (public key only, distributable via config/JWKS).
@@ -196,7 +197,7 @@ All under `/api/v1/auth`, error envelope `{ "error": { "code", "message" } }`.
 | ID | Requirement |
 |---|---|
 | SEC-01 | Passwords hashed with **argon2id** (fallback: bcrypt cost ≥ 12). Plaintext passwords never logged, never stored, never included in events. |
-| SEC-02 | RS256 keypair: private key only in the auth package's runtime (prod: AWS Secrets Manager; local: git-ignored file). Public key distributed to services. Key rotation supported via `kid` header + a two-key verification window. |
+| SEC-02 | RS256 keypair: private key only in the auth package's runtime (prod: **SSM Parameter Store SecureString**, injected at deploy time — Secrets Manager remains the Phase 10 target but bills $0.40 per secret per month, see [`deployment-aws.md`](deployment-aws.md) §2; local: git-ignored file). Public key distributed to services. Key rotation supported via `kid` header + a two-key verification window. |
 | SEC-03 | All auth cookies: `httpOnly`, `Secure`, `SameSite=Lax`. Refresh cookie additionally path-scoped to `/api/v1/auth`. |
 | SEC-04 | Email-verification and password-reset tokens: single-use, hashed at rest, expiring per FR-03/FR-07. |
 | SEC-05 | OAuth2 flows use `state` + PKCE; redirect URIs are exact-match allowlisted. |
