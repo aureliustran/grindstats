@@ -156,7 +156,20 @@ The event catalog — routing keys, publishers, consumers, payloads — is in th
 - REST + JSON, versioned `/api/v1/...` from day one
 - OpenAPI generated per domain from Gin route comments (swaggo) — this generated spec is
   what `shared-contract.md` points the frontend at
-- Error envelope, everywhere, no exceptions: `{ "error": { "code": "...", "message": "..." } }`
+- **Every response body is enveloped, success or error, no exceptions.** A handler never
+  writes a bare `gin.H{...}` or a raw struct — that reintroduces the per-endpoint shape drift
+  the envelope exists to prevent:
+  - Error: `{ "error": { "code": "...", "message": "..." } }`
+  - Single resource / action result: `{ "data": ... }` — `httpkit.OK` (200) / `httpkit.Created`
+    (201) / `httpkit.Data` (any status)
+  - List: `{ "data": [...], "pagination": { "page", "page_size", "total_items",
+    "total_pages" } }` — `httpkit.Paginated`, with `httpkit.NewPagination` computing
+    `total_pages` so no caller does that arithmetic by hand. `data` is always `[]`, never
+    `null`, for an empty page.
+  - `libs/httpkit/envelope.go` is the one place that writes any of these shapes.
+  - `/healthz` and `/readyz` (GATE-001) predate this convention and keep their existing
+    unenveloped `{ "status": "..." }` body — that shape is a frozen contract already covered
+    by acceptance criteria and tests; changing it is a contract amendment, not a drive-by fix.
 - Aggregation endpoints return **pre-bucketed series**, not raw rows — the client never does
   analytics arithmetic
 - **Two-step writes for anything LLM-generated**: `POST /estimate` → `POST /confirm`,

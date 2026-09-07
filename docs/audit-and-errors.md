@@ -6,6 +6,7 @@ source of truth. Generated consumers are never hand-edited.
 **Server message catalogs:** [`libs/i18n/locales/`](../libs/i18n/) — keyed by error code.
 **Frontend catalogs:** `apps/web/src/i18n/locales/` — separate, and deliberately not copies.
 **Generator:** `python3 scripts/gen_audit_model.py` (`--check` for CI).
+**DB storage format:** compact 8-char codes, not the readable strings — see §6.
 **Companions:** [`shared-contract.md`](shared-contract.md) · [`backend.md`](backend.md) ·
 [`i18n-guidelines.md`](i18n-guidelines.md)
 
@@ -104,9 +105,10 @@ request ID, a device label. Constraining those buys nothing and just creates chu
 ### Rules
 
 - **An enum value is a permanent identifier, not display text.** `active`, not `Active` or
-  `"In progress"`. Values are written to the database and to append-only audit records, so
-  renaming one invalidates every stored row and every historical record that used it. There
-  is no migration that fixes an audit log.
+  `"In progress"`. Values are written to the database and to append-only audit records — as a
+  generated compact code, not the literal string; see §6 — so renaming one invalidates every
+  stored row and every historical record that used it. There is no migration that fixes an
+  audit log.
 - **Display text comes from i18n keys**, never from the enum value. `RoutineStatus.active`
   renders through `t('routines.status.active')` — which is also how it gets a Vietnamese
   form.
@@ -242,7 +244,112 @@ the only good reason to spend a build step on it.
 
 ---
 
-## 6. Open tension to resolve before Phase 2
+## 6. Compact DB codes
+
+Error codes, audit event names, and enum values are readable strings
+(`AUTH_INVALID_CREDENTIALS`, `auth.login.failed`, `RoutineStatus.active`) everywhere they're
+*used* — in Go, in TypeScript, in the API response, in a human reading a query result. But the
+tables that store them (the audit log especially) are append-only and high-volume, and repeating
+a long string in every indexed row and every foreign-keyed reference is waste that compounds. So
+what's actually persisted in the DB for an error code, an audit event name, or an enum value is a
+compact 8-character code, and the readable string is a generated, in-process lookup away — never
+a second source of truth.
+
+**This is a storage-layer optimization only.** It changes nothing about section 4's rule that
+error codes are the stable external identifier, section 3's rule that audit records answer
+"who did what to whom," or section 2's rule that an enum value is a permanent identifier.
+Clients still switch on `AUTH_INVALID_CREDENTIALS`; application code still compares against
+`RoutineStatus.active`; nothing compact ever reaches an API response, a rendered message, or a
+line of Go/TypeScript business logic. The translation happens once, at the boundary where a row
+is read out of the DB, before it's handed to any handler, response serializer, audit-message
+renderer, or in-memory domain object.
+
+### Format
+
+```
+AUTH0001
+└──┘│└─┘
+ │  │ └── 3-digit sequence number, zero-padded, unique per (prefix, kind)
+ │  └──── kind digit: 0 = error code, 1 = audit event, 2 = enum value
+ └─────── 4-letter prefix, derived from the readable name
+```
+
+8 characters, fixed width. `AUTH_INVALID_CREDENTIALS` might compact to `AUTH0001`;
+`auth.login.failed` might compact to `AUTH1003`; `RoutineStatus.active` might compact to
+`ROUT2001`. All three can encode different things (`0`/`1`/`2`) even while sharing a prefix — the
+prefix says "this is roughly in the auth/routine area to a human skimming a DB row," the (kind,
+sequence) pair is what actually guarantees uniqueness.
+
+- **Prefix**: uppercase, first 4 letters of the name's first segment.
+  - Error code: the part before the first `_` — `VALIDATION_FAILED` → `VALI`.
+  - Audit event: the part before the first `.` — `admin.action.performed` → `ADMI`.
+  - Enum value: the **enum name**, not the value — `RoutineStatus.active` → `ROUT`,
+    `LoginFailureReason.bad_password` → `LOGI`. The enum name is what's derived from, because
+    enum values themselves are short and repeat across enums (`active` alone appears in both
+    `RoutineStatus` and, differently spelled per-enum, other status enums) — deriving from the
+    value would make the prefix nearly useless as a skimming aid and wouldn't help uniqueness
+    anyway, since that's the sequence number's job regardless.
+
+  Two different readable names — of the same or different kinds — can land on the same prefix
+  (`AUTH_INVALID_CREDENTIALS` and a hypothetical `AUTHOR_DENIED` both start `AUTH`; so could an
+  `AdminAction` enum value under kind `2`) — that's fine, the (kind, sequence) pair still makes
+  every full code unique, and nobody is expected to reconstruct the readable name from the
+  prefix by eye.
+- **Kind digit**: `0` for every entry under `error_codes:`, `1` for every entry under `events:`,
+  `2` for every value under any enum in `enums:`. Reserved so a compact code alone tells you
+  which table/lookup to translate it through, without touching the DB row it came from.
+- **Sequence**: assigned by the generator, not hand-written. Per distinct (prefix, kind) pair,
+  the next new entry gets the next unused 3-digit number in declaration order. For enum values,
+  this means the sequence is scoped to (enum-name-derived prefix, `2`) — so all values of one
+  enum share a prefix and get consecutive sequence numbers as they're added, while a same-named
+  value in a *different* enum (`active` in `RoutineStatus` vs. `active` in `OccurrenceStatus`,
+  different prefixes `ROUT`/`OCCU`) never collides in the first place. Never reused, even if the
+  entry it belonged to is later removed — a removed value's compact code is retired, not
+  recycled, so an old row referencing it doesn't silently start meaning something new.
+
+### Assignment and generation
+
+`model.yaml` keeps the readable name (`AUTH_INVALID_CREDENTIALS`, `auth.login.failed`,
+`RoutineStatus.active`) as the entry's key — engineers never write a compact code by hand. The
+generator assigns one the first time an entry is generated and then treats it as permanent:
+`libs/auditmodel/generated.go` and `apps/web/src/api/generated/audit.ts` each carry a
+bidirectional map (readable ↔ compact) as part of their generated output, alongside the
+constants section 1 already describes. Regenerating after adding a new entry only ever *appends*
+new mappings — an existing readable name's compact code never changes, because that would
+invalidate every row that already carries it, in the audit log or in any domain table storing
+the enum's compact form.
+
+**The DB never needs its own lookup table.** Translation happens through the generated in-process
+map, in the backend service that read the row — the same discipline as `renderServerMessage()`
+being the one sanctioned place a server message reaches the client. A raw SQL query against the
+audit table, or against any domain table with an enum-typed column, sees only compact codes;
+anyone needing readable output reads it through the service layer, not by joining against the
+database directly.
+
+### Rules
+
+- **Compact codes are a storage detail, not a wire format.** They never appear in an API
+  response, an audit `message` rendering, application business logic (`if status == "active"`
+  compares against the readable constant, translated on read — never against `ROUT2001`), or
+  anything a client or a human reads.
+- **The generator assigns and owns the mapping. Never hand-edit a compact code**, for the same
+  reason the rest of `generated.go` and `audit.ts` are never hand-edited.
+- **A compact code is permanent once assigned** — it is written to append-only audit rows and to
+  every domain table storing that enum's compact form, and there is no migration that re-codes
+  history. This sits alongside, and does not relax, section 2's existing rule that an enum
+  *value* itself is a permanent identifier — renaming the readable value is still breaking,
+  independent of what its compact code happens to be.
+- **Removing an error code, event, or enum value retires its compact code.** The generator must
+  not reassign a retired (prefix, kind, sequence) to a new entry, even one with an identical
+  prefix or, for enums, the same value spelling reintroduced later.
+- **Adding a value to an existing enum only ever appends a new compact code** to that enum's
+  (prefix, `2`) sequence — it never touches the compact codes already assigned to that enum's
+  other values, so this stays compatible with section 2's "adding a value is usually safe"
+  guidance.
+
+---
+
+## 7. Open tension to resolve before Phase 2
 
 `AUTH_ACCOUNT_SUSPENDED` conflicts with the enumeration protection this document is
 otherwise built around.

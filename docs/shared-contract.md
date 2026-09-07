@@ -45,6 +45,7 @@ runtime, and the contract file no longer describes either implementation.
 | Frontend API client | Generated from the above — never hand-written | TypeScript |
 | Events | Routing keys, publishers, consumers, payload shapes (blueprint §11) | Table + payload schemas |
 | Errors | `{ "error": { "code": "...", "message": "..." } }` — every endpoint, no exceptions. Codes are declared in [`libs/auditmodel/model.yaml`](../libs/auditmodel/model.yaml) and generated for both sides; see [`audit-and-errors.md`](audit-and-errors.md) | Envelope + generated code registry |
+| Success responses | `{ "data": ... }` for a single resource/result, `{ "data": [...], "pagination": {...} }` for a list. Written only via [`libs/httpkit/envelope.go`](../libs/httpkit/envelope.go) (`OK`/`Created`/`Data`/`Paginated`). `/healthz`/`/readyz` (GATE-001) predate this and keep their own unenveloped shape | Envelope |
 | Auth | Cookie transport, CSRF header, token claims, check order | [`srs-authentication.md`](srs-authentication.md) |
 | Cross-domain interfaces | Exported service interfaces (in-process today, HTTP at Phase 10) | Go interfaces |
 
@@ -66,7 +67,12 @@ These hold across every endpoint and event, and do not need restating per-featur
 
 **API**
 - Versioned `/api/v1/...` paths from day one
+- **Every response body is enveloped, success or error, no exceptions** (`/healthz`/`/readyz`
+  excepted — see the table above). A client can rely on `data`/`error` being present at the
+  top level without knowing which endpoint it called
 - The error envelope is universal; error codes are stable identifiers, not display text
+- A list response's `pagination.total_pages` is always server-computed; a client never
+  derives it from `total_items`/`page_size` itself
 - **Every request carries `Accept-Language`.** The server renders the envelope's `message`
   in that locale from `libs/i18n/locales/`, falling back to en-US. The header affects the
   *response only* — audit records are always written in en-US, because a per-locale audit

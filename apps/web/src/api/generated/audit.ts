@@ -21,6 +21,14 @@ export const ALL_ACTOR_TYPE: readonly ActorType[] = [
   "anonymous",
 ] as const;
 
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const ACTOR_TYPE_COMPACT: Record<ActorType, string> = {
+  "user": "ACTO2001",
+  "system_admin": "ACTO2002",
+  "system": "ACTO2003",
+  "anonymous": "ACTO2004",
+};
+
 /** Whether the audited attempt achieved its effect. */
 export type Outcome =
   | "success"
@@ -31,6 +39,13 @@ export const ALL_OUTCOME: readonly Outcome[] = [
   "failure",
   "denied",
 ] as const;
+
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const OUTCOME_COMPACT: Record<Outcome, string> = {
+  "success": "OUTC2001",
+  "failure": "OUTC2002",
+  "denied": "OUTC2003",
+};
 
 /** Operational attention an event warrants. */
 export type Severity =
@@ -45,6 +60,14 @@ export const ALL_SEVERITY: readonly Severity[] = [
   "critical",
 ] as const;
 
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const SEVERITY_COMPACT: Record<Severity, string> = {
+  "info": "SEVE2001",
+  "warn": "SEVE2002",
+  "error": "SEVE2003",
+  "critical": "SEVE2004",
+};
+
 /** System roles (SRS-AUTH-001 §1.4). Exactly two, deliberately. */
 export type Role =
   | "user"
@@ -53,6 +76,12 @@ export const ALL_ROLE: readonly Role[] = [
   "user",
   "system_admin",
 ] as const;
+
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const ROLE_COMPACT: Record<Role, string> = {
+  "user": "ROLE2001",
+  "system_admin": "ROLE2002",
+};
 
 /** Lifecycle of a routine template. */
 export type RoutineStatus =
@@ -67,6 +96,14 @@ export const ALL_ROUTINE_STATUS: readonly RoutineStatus[] = [
   "completed",
 ] as const;
 
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const ROUTINE_STATUS_COMPACT: Record<RoutineStatus, string> = {
+  "draft": "ROUT2001",
+  "active": "ROUT2002",
+  "paused": "ROUT2003",
+  "completed": "ROUT2004",
+};
+
 /** Lifecycle of one concrete scheduled period. */
 export type OccurrenceStatus =
   | "upcoming"
@@ -80,6 +117,14 @@ export const ALL_OCCURRENCE_STATUS: readonly OccurrenceStatus[] = [
   "skipped",
 ] as const;
 
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const OCCURRENCE_STATUS_COMPACT: Record<OccurrenceStatus, string> = {
+  "upcoming": "OCCU2001",
+  "active": "OCCU2002",
+  "completed": "OCCU2003",
+  "skipped": "OCCU2004",
+};
+
 /** State of one task inside an occurrence. */
 export type TaskStatus =
   | "unchecked"
@@ -90,6 +135,13 @@ export const ALL_TASK_STATUS: readonly TaskStatus[] = [
   "checked",
   "skipped",
 ] as const;
+
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const TASK_STATUS_COMPACT: Record<TaskStatus, string> = {
+  "unchecked": "TASK2001",
+  "checked": "TASK2002",
+  "skipped": "TASK2003",
+};
 
 /** What kind of session a routine period represents. */
 export type PeriodKind =
@@ -104,6 +156,14 @@ export const ALL_PERIOD_KIND: readonly PeriodKind[] = [
   "rest",
 ] as const;
 
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const PERIOD_KIND_COMPACT: Record<PeriodKind, string> = {
+  "resistance": "PERI2001",
+  "cardio": "PERI2002",
+  "habit": "PERI2003",
+  "rest": "PERI2004",
+};
+
 /** Training modality. Drives which analytics pipeline applies. */
 export type TrainingType =
   | "resistance"
@@ -112,6 +172,12 @@ export const ALL_TRAINING_TYPE: readonly TrainingType[] = [
   "resistance",
   "cardio",
 ] as const;
+
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const TRAINING_TYPE_COMPACT: Record<TrainingType, string> = {
+  "resistance": "TRAI2001",
+  "cardio": "TRAI2002",
+};
 
 /** How a calorie log entry was produced. */
 export type CalorieSource =
@@ -124,6 +190,13 @@ export const ALL_CALORIE_SOURCE: readonly CalorieSource[] = [
   "barcode",
 ] as const;
 
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const CALORIE_SOURCE_COMPACT: Record<CalorieSource, string> = {
+  "manual": "CALO2001",
+  "photo": "CALO2002",
+  "barcode": "CALO2003",
+};
+
 /** External account types a user can link. */
 export type LinkedProvider =
   | "google"
@@ -134,6 +207,13 @@ export const ALL_LINKED_PROVIDER: readonly LinkedProvider[] = [
   "apple",
   "qwen",
 ] as const;
+
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const LINKED_PROVIDER_COMPACT: Record<LinkedProvider, string> = {
+  "google": "LINK2001",
+  "apple": "LINK2002",
+  "qwen": "LINK2003",
+};
 
 /** Why a login attempt failed. INTERNAL — this granularity exists for forensics and must never reach the client. See auth.login.failed. */
 export type LoginFailureReason =
@@ -150,6 +230,15 @@ export const ALL_LOGIN_FAILURE_REASON: readonly LoginFailureReason[] = [
   "rate_limited",
 ] as const;
 
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const LOGIN_FAILURE_REASON_COMPACT: Record<LoginFailureReason, string> = {
+  "unknown_email": "LOGI2001",
+  "bad_password": "LOGI2002",
+  "account_suspended": "LOGI2003",
+  "backoff_active": "LOGI2004",
+  "rate_limited": "LOGI2005",
+};
+
 /** Which link in the gateway check chain failed (FR-20). The declared order IS the evaluation order — the first failing check is what gets recorded. */
 export type TokenRejectReason =
   | "bad_signature"
@@ -162,6 +251,14 @@ export const ALL_TOKEN_REJECT_REASON: readonly TokenRejectReason[] = [
   "blacklisted",
   "epoch_stale",
 ] as const;
+
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const TOKEN_REJECT_REASON_COMPACT: Record<TokenRejectReason, string> = {
+  "bad_signature": "TOKE2001",
+  "expired": "TOKE2002",
+  "blacklisted": "TOKE2003",
+  "epoch_stale": "TOKE2004",
+};
 
 /** Administrative actions, each append-only audited (FR-45). */
 export type AdminAction =
@@ -182,6 +279,17 @@ export const ALL_ADMIN_ACTION: readonly AdminAction[] = [
   "view_security_events",
 ] as const;
 
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const ADMIN_ACTION_COMPACT: Record<AdminAction, string> = {
+  "suspend": "ADMI2001",
+  "unsuspend": "ADMI2002",
+  "force_logout": "ADMI2003",
+  "role_grant": "ADMI2004",
+  "role_revoke": "ADMI2005",
+  "view_sessions": "ADMI2006",
+  "view_security_events": "ADMI2007",
+};
+
 /** Stable error identifiers. Switch on these — never on the message. */
 export type ErrorCode =
   | "AUTH_INVALID_CREDENTIALS"
@@ -194,6 +302,20 @@ export type ErrorCode =
   | "VALIDATION_FAILED"
   | "SERVICE_UNAVAILABLE"
   | "INTERNAL_ERROR";
+
+/** Permanent 8-char DB code per error code (docs/audit-and-errors.md §6). Storage detail only — never appears in a response or a switch. */
+export const ERROR_CODE_COMPACT: Record<ErrorCode, string> = {
+  AUTH_INVALID_CREDENTIALS: "AUTH0001",
+  AUTH_INVALID_TOKEN: "AUTH0002",
+  AUTH_SESSION_EXPIRED: "AUTH0003",
+  AUTH_FORBIDDEN: "AUTH0004",
+  AUTH_CSRF_FAILED: "AUTH0005",
+  AUTH_ACCOUNT_SUSPENDED: "AUTH0006",
+  AUTH_RATE_LIMITED: "AUTH0007",
+  VALIDATION_FAILED: "VALI0001",
+  SERVICE_UNAVAILABLE: "SERV0001",
+  INTERNAL_ERROR: "INTE0001",
+};
 
 // No message text or i18n keys are generated here on purpose.
 //

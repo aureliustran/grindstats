@@ -13,8 +13,15 @@ Usage:
 --check is the CI mode: it also fails if the generated files are out of date,
 which is what stops someone editing generated.go by hand and having it silently
 reverted on the next run.
+
+Also maintains libs/auditmodel/compact_codes.json, the append-only ledger that
+makes each entry's compact DB code (docs/audit-and-errors.md §6) permanent: an
+entry already in the ledger keeps its code forever, a new entry gets the next
+unused sequence for its prefix+kind, and a removed entry's code is never
+recycled because the ledger is never pruned.
 """
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -28,8 +35,18 @@ ROOT = Path(__file__).resolve().parent.parent
 MODEL = ROOT / "libs/auditmodel/model.yaml"
 GO_OUT = ROOT / "libs/auditmodel/generated.go"
 TS_OUT = ROOT / "apps/web/src/api/generated/audit.ts"
+LEDGER_PATH = ROOT / "libs/auditmodel/compact_codes.json"
 SERVER_LOCALES = ROOT / "libs/i18n/locales"
 SERVER_SOURCE_LOCALE = "en-US"
+
+# Compact DB code format (docs/audit-and-errors.md §6): 4-letter prefix +
+# kind digit + 3-digit sequence, e.g. AUTH0001. The kind digit says which
+# table/lookup a compact code belongs to, independent of the DB row it came
+# from.
+KIND_ERROR_CODE = "0"
+KIND_EVENT = "1"
+KIND_ENUM_VALUE = "2"
+MAX_SEQUENCE = 999
 
 # Field names that would mean a secret is being written to an append-only,
 # 90-day-retained log. Log the handle (jti), never the token itself (NFR-07).
@@ -49,8 +66,6 @@ def server_catalogs():
     These are the SERVER's rendering catalogs, keyed by error code — not the
     frontend's, which live in apps/web/src/i18n and are the SPA's own business.
     """
-    import json
-
     if not SERVER_LOCALES.is_dir():
         return None
     out = {}
@@ -165,14 +180,94 @@ def validate(model):
     return errors
 
 
+def load_ledger():
+    """The compact-code assignment ledger: readable name -> permanent compact code.
+
+    This is the memory that makes compact codes permanent (docs/audit-and-errors.md
+    §6). model.yaml alone isn't enough — once an entry is removed, its history isn't
+    in the model anymore, but its retired compact code must still never be handed to
+    a new entry. So the ledger is never pruned: an entry disappearing from model.yaml
+    leaves its mapping and its counter contribution right where they are.
+    """
+    if not LEDGER_PATH.exists():
+        return {"counters": {}, "codes": {}}
+    data = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
+    return {"counters": data.get("counters", {}), "codes": data.get("codes", {})}
+
+
+def compact_prefix(segment):
+    """Uppercase, letters-only, first 4 chars, padded with X if the segment is short."""
+    letters = re.sub(r"[^A-Za-z]", "", segment).upper()
+    return (letters + "XXXX")[:4]
+
+
+def assign_compact_codes(model, ledger):
+    """Assign every error_codes/events/enum-value entry its compact DB code.
+
+    Returns (assigned, new_ledger, errors). `assigned` mirrors the model's shape:
+    {"error_codes": {name: code}, "events": {name: code},
+     "enums": {enum_name: {value: code}}}.
+
+    An entry already in the ledger reuses its code unchanged — this is what makes a
+    code permanent across regenerations. A new entry gets the next unused sequence
+    number for its (prefix, kind) pair; that counter only ever increases, even for
+    prefixes whose only prior user has since been removed from the model, so a
+    retired code is never handed to something else (docs/audit-and-errors.md §6).
+    """
+    codes = dict(ledger.get("codes", {}))
+    counters = dict(ledger.get("counters", {}))
+    errors = []
+
+    def assign(ledger_key, prefix, kind):
+        if ledger_key in codes:
+            return codes[ledger_key]
+        counter_key = f"{prefix}:{kind}"
+        seq = counters.get(counter_key, 0) + 1
+        if seq > MAX_SEQUENCE:
+            errors.append(
+                f"compact code sequence exhausted for prefix '{prefix}' kind '{kind}' "
+                f"(>{MAX_SEQUENCE} entries share this prefix+kind) — "
+                "docs/audit-and-errors.md §6 has no defined resolution for this yet"
+            )
+            return None
+        counters[counter_key] = seq
+        code = f"{prefix}{kind}{seq:03d}"
+        codes[ledger_key] = code
+        return code
+
+    assigned = {"error_codes": {}, "events": {}, "enums": {}}
+
+    for name in model.get("error_codes", {}):
+        prefix = compact_prefix(name.split("_")[0])
+        assigned["error_codes"][name] = assign(f"error_code:{name}", prefix, KIND_ERROR_CODE)
+
+    for name in model.get("events", {}):
+        prefix = compact_prefix(name.split(".")[0])
+        assigned["events"][name] = assign(f"event:{name}", prefix, KIND_EVENT)
+
+    for enum_name, spec in model.get("enums", {}).items():
+        prefix = compact_prefix(enum_name)
+        assigned["enums"][enum_name] = {}
+        for value in spec.get("values", {}):
+            code = assign(f"enum:{enum_name}.{value}", prefix, KIND_ENUM_VALUE)
+            assigned["enums"][enum_name][value] = code
+
+    new_ledger = {"counters": counters, "codes": codes}
+    return assigned, new_ledger, errors
+
+
+def ledger_source(ledger):
+    return json.dumps(ledger, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+
+
 def go_ident(s):
     return "".join(p.capitalize() for p in re.split(r"[._]", s))
 
 
-def gen_go(model):
+def gen_go(model, assigned):
     L = [
         "// Code generated by scripts/gen_audit_model.py. DO NOT EDIT.",
-        "// Source: libs/auditmodel/model.yaml",
+        "// Source: libs/auditmodel/model.yaml + libs/auditmodel/compact_codes.json",
         "//",
         "// Hand edits are reverted on the next generation run. Change the model file.",
         "",
@@ -183,6 +278,7 @@ def gen_go(model):
     L.append("")
     for name, spec in model["enums"].items():
         desc = (spec.get("description") or "").strip().replace("\n", " ")
+        compact = assigned["enums"][name]
         L.append(f"// {name}: {desc}")
         L.append(f"type {name} string")
         L.append("")
@@ -204,6 +300,21 @@ def gen_go(model):
         L.append("\t\t}")
         L.append("\t}")
         L.append("\treturn false")
+        L.append("}")
+        L.append("")
+        L.append(
+            f"// {name}Compact is the permanent 8-char DB code for each value "
+            "(docs/audit-and-errors.md §6). Never appears outside the storage layer."
+        )
+        L.append(f"var {name}Compact = map[{name}]string{{")
+        for v in spec.get("values", {}):
+            L.append(f'\t{name}{go_ident(v)}: "{compact[v]}",')
+        L.append("}")
+        L.append("")
+        L.append(f"// CompactTo{name} is the inverse of {name}Compact, for translating a DB read.")
+        L.append(f"var CompactTo{name} = map[string]{name}{{")
+        for v in spec.get("values", {}):
+            L.append(f'\t"{compact[v]}": {name}{go_ident(v)},')
         L.append("}")
         L.append("")
 
@@ -234,6 +345,21 @@ def gen_go(model):
     L.append("var AllErrorCodes = []ErrorCode{")
     for name in model["error_codes"]:
         L.append(f"\tErr{go_ident(name.lower())},")
+    L.append("}")
+    L.append("")
+    L.append(
+        "// ErrorCodeCompact is the permanent 8-char DB code for each error code "
+        "(docs/audit-and-errors.md §6). Never appears in an API response."
+    )
+    L.append("var ErrorCodeCompact = map[ErrorCode]string{")
+    for name in model["error_codes"]:
+        L.append(f'\tErr{go_ident(name.lower())}: "{assigned["error_codes"][name]}",')
+    L.append("}")
+    L.append("")
+    L.append("// CompactToErrorCode is the inverse of ErrorCodeCompact, for translating a DB read.")
+    L.append("var CompactToErrorCode = map[string]ErrorCode{")
+    for name in model["error_codes"]:
+        L.append(f'\t"{assigned["error_codes"][name]}": Err{go_ident(name.lower())},')
     L.append("}")
     L.append("")
 
@@ -278,10 +404,25 @@ def gen_go(model):
         L.append("\t},")
     L.append("}")
     L.append("")
+    L.append(
+        "// AuditEventCompact is the permanent 8-char DB code for each audit event "
+        "(docs/audit-and-errors.md §6). Never appears in a rendered audit message."
+    )
+    L.append("var AuditEventCompact = map[AuditEvent]string{")
+    for name in model["events"]:
+        L.append(f'\tEvt{go_ident(name)}: "{assigned["events"][name]}",')
+    L.append("}")
+    L.append("")
+    L.append("// CompactToAuditEvent is the inverse of AuditEventCompact, for translating a DB read.")
+    L.append("var CompactToAuditEvent = map[string]AuditEvent{")
+    for name in model["events"]:
+        L.append(f'\t"{assigned["events"][name]}": Evt{go_ident(name)},')
+    L.append("}")
+    L.append("")
     return "\n".join(L)
 
 
-def gen_ts(model):
+def gen_ts(model, assigned):
     L = [
         "// Code generated by scripts/gen_audit_model.py. DO NOT EDIT.",
         "// Source: libs/auditmodel/model.yaml",
@@ -297,13 +438,24 @@ def gen_ts(model):
     for name, spec in model["enums"].items():
         desc = (spec.get("description") or "").strip().replace("\n", " ")
         vals = list(spec.get("values", {}))
+        screaming = re.sub(r"(?<!^)(?=[A-Z])", "_", name).upper()
+        compact = assigned["enums"][name]
         L.append(f"/** {desc} */")
         L.append(f"export type {name} =")
         L.extend([f'  | "{v}"' for v in vals])
         L[-1] += ";"
-        L.append(f"export const ALL_{re.sub(r'(?<!^)(?=[A-Z])', '_', name).upper()}: readonly {name}[] = [")
+        L.append(f"export const ALL_{screaming}: readonly {name}[] = [")
         L.extend([f'  "{v}",' for v in vals])
         L.append("] as const;")
+        L.append("")
+        L.append(
+            f"/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). "
+            "Storage detail only — never compare application logic against these. */"
+        )
+        L.append(f"export const {screaming}_COMPACT: Record<{name}, string> = {{")
+        for v in vals:
+            L.append(f'  "{v}": "{compact[v]}",')
+        L.append("};")
         L.append("")
 
     L.append("/** Stable error identifiers. Switch on these — never on the message. */")
@@ -311,6 +463,15 @@ def gen_ts(model):
     codes = list(model["error_codes"])
     L.extend([f'  | "{c}"' for c in codes])
     L[-1] += ";"
+    L.append("")
+    L.append(
+        "/** Permanent 8-char DB code per error code (docs/audit-and-errors.md §6). "
+        "Storage detail only — never appears in a response or a switch. */"
+    )
+    L.append("export const ERROR_CODE_COMPACT: Record<ErrorCode, string> = {")
+    for name in codes:
+        L.append(f'  {name}: "{assigned["error_codes"][name]}",')
+    L.append("};")
     L.append("")
     L.append("// No message text or i18n keys are generated here on purpose.")
     L.append("//")
@@ -342,12 +503,18 @@ def main():
     if errors:
         fail(errors)
 
-    go_src, ts_src = gen_go(model), gen_ts(model)
+    ledger = load_ledger()
+    assigned, new_ledger, assign_errors = assign_compact_codes(model, ledger)
+    if assign_errors:
+        fail(assign_errors)
+
+    go_src, ts_src = gen_go(model, assigned), gen_ts(model, assigned)
+    ledger_src = ledger_source(new_ledger)
 
     if args.check:
         stale = [
             str(p.relative_to(ROOT))
-            for p, src in ((GO_OUT, go_src), (TS_OUT, ts_src))
+            for p, src in ((GO_OUT, go_src), (TS_OUT, ts_src), (LEDGER_PATH, ledger_src))
             if not p.exists() or p.read_text(encoding="utf-8") != src
         ]
         if stale:
@@ -363,7 +530,11 @@ def main():
     TS_OUT.parent.mkdir(parents=True, exist_ok=True)
     GO_OUT.write_text(go_src, encoding="utf-8")
     TS_OUT.write_text(ts_src, encoding="utf-8")
-    print(f"OK: wrote {GO_OUT.relative_to(ROOT)} and {TS_OUT.relative_to(ROOT)}")
+    LEDGER_PATH.write_text(ledger_src, encoding="utf-8")
+    print(
+        f"OK: wrote {GO_OUT.relative_to(ROOT)}, {TS_OUT.relative_to(ROOT)}, "
+        f"and {LEDGER_PATH.relative_to(ROOT)}"
+    )
     print(
         f"     {len(model['enums'])} enums, {len(model['error_codes'])} error codes, "
         f"{len(model['events'])} events"

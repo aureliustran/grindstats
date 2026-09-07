@@ -9,6 +9,7 @@ before assigning the next one.
 |------|------|---------|--------|
 | [LAND-001](LAND-001-public-landing-page/story.md) | public-landing-page | Landing page for unauthenticated visitors: daily-regimen hero, marketing menu, and an auth modal with email/password and Google sign-in | frontend implemented against a mock auth client (run 1, 2026-09-06); backend pending — see [contract.md](LAND-001-public-landing-page/contract.md) |
 | [GATE-001](GATE-001-api-gateway-health/story.md) | api-gateway-health | API gateway skeleton — middleware chain, error envelope, and liveness/readiness probes with required vs. optional dependency classification | draft |
+| [PLAT-001](PLAT-001-audit-log-and-error-codes/story.md) | audit-log-and-error-codes | Declare-once audit/enum/error-code model (`libs/auditmodel/model.yaml`) generating Go + TypeScript consumers, with the validation rules that keep them from drifting | draft |
 
 ## Epic: Authentication & session management
 
@@ -29,6 +30,7 @@ Derived from `docs/srs-authentication.md` (SRS-AUTH-001). See
 - `LAND-` → next is `LAND-002`
 - `AUTH-` → next is `AUTH-006`
 - `GATE-` → next is `GATE-002`
+- `PLAT-` → next is `PLAT-002`
 
 Update this list whenever a new story is added — it's what stops two stories from
 colliding on the same code.
