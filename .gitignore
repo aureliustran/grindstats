@@ -11,8 +11,11 @@ vendor/
 # Node / React
 node_modules/
 dist/
+dist-ssr/
 build/
 .vite/
+*.local
+*.tsbuildinfo
 
 # Env / secrets
 .env
@@ -23,10 +26,16 @@ build/
 docker-compose.override.yml
 
 # IDE / OS
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 .idea/
 .DS_Store
 Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # Python
 __pycache__/
