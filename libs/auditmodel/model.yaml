@@ -6,17 +6,27 @@
 # event definitions, and the error codes derived from them.
 #
 # Generated consumers (never hand-edit those files):
-#   libs/auditmodel/generated.go            Go constants + validators
+#   libs/auditmodel/generated.go            Go constants + validators +
+#                                            readable<->compact code maps
 #   apps/web/src/api/generated/audit.ts     TS types for status values + codes
 # Regenerate with: python3 scripts/gen_audit_model.py
 #
-# Rules for changing this file: docs/audit-and-errors.md. The two that get
+# Rules for changing this file: docs/audit-and-errors.md. The three that get
 # broken first:
 #   1. An enum VALUE is a permanent storage/wire identifier, never display
 #      text. Renaming one invalidates every stored row and audit record that
 #      used it. Display text comes from i18n keys.
 #   2. Several audit events may map to ONE error code. That is deliberate and
 #      often a security control — see auth.login.failed below.
+#   3. Every error_codes/events entry, AND every enum value under enums:,
+#      gets a generator-assigned 8-char compact DB code (4-letter prefix +
+#      kind digit [0=error_code, 1=event, 2=enum value] + 3-digit sequence)
+#      the first time it's generated. Never write one by hand here, and
+#      never rename an entry key or enum value without checking
+#      docs/audit-and-errors.md §6 — the compact code is permanent once
+#      assigned. It never appears in an API response, a rendered message, or
+#      application logic; it exists only so the DB stores 8 bytes instead of
+#      a readable string.
 # =============================================================================
 
 version: 1
