@@ -349,7 +349,29 @@ database directly.
 
 ---
 
-## 7. Open tension to resolve before Phase 2
+## 7. Resolved: `AUTH_ACCOUNT_SUSPENDED` vs. enumeration protection
+
+> **Decided 2026-09-07 (option 3 below), during phase 1 of the auth epic's first execution
+> run.** Login verifies the password **first**; `403 AUTH_ACCOUNT_SUSPENDED` is returned only
+> when the credentials are correct *and* the account is suspended. A wrong password on a
+> suspended account is indistinguishable from a wrong password on an active one, and from an
+> unknown address: `401 AUTH_INVALID_CREDENTIALS`.
+>
+> A prober therefore learns nothing they did not already have — they must hold the password
+> before the response differs at all — while the account's real owner gets a real explanation
+> instead of an unexplained failure. It still leaks to a credential-stuffer holding a valid
+> pair; that residual risk is accepted and recorded.
+>
+> Model consequence: `LoginFailureReason.account_suspended` is **retained but no longer
+> emitted** — its compact code is permanent (§6) and retiring a live value is not a thing this
+> model does. The suspended outcome gets its own event, `auth.login.suspended`, because an
+> event carries exactly one `error_code`.
+>
+> Full reasoning and the surrounding decisions:
+> [`stories/auth-epic/contract.md`](stories/auth-epic/contract.md) §0 (D2). Mirrored in
+> [`srs-authentication.md`](srs-authentication.md) §3.8.
+
+The tension, kept because the reasoning is the point:
 
 `AUTH_ACCOUNT_SUSPENDED` conflicts with the enumeration protection this document is
 otherwise built around.
@@ -374,4 +396,4 @@ Three ways out, none free:
 
 This was surfaced by modelling the two surfaces together — it is invisible when audit events
 and error codes are written in separate places, which is a fair argument for this whole
-approach. **Decide before implementing auth; record the decision here and in the SRS.**
+approach. **Decided: option 3, above.**

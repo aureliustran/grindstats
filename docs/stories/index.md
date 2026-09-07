@@ -17,13 +17,18 @@ Derived from `docs/srs-authentication.md` (SRS-AUTH-001). See
 [auth-epic-overview.md](auth-epic-overview.md) for how these five relate and connect to
 `LAND-001-public-landing-page`'s auth modal.
 
+The epic is built across two multi-agent runs. Run 1 covers AUTH-001..003 and the FR-20..24
+gateway chain; its frozen contract and slice partition live in
+[auth-epic/](auth-epic/plan.md) rather than in any one story folder, because they span all
+three.
+
 | Code | Slug | Actor | Summary | Status |
 |------|------|-------|---------|--------|
-| [AUTH-001](AUTH-001-auth-registration/story.md) | auth-registration | Unauthenticated visitor | Create an account, verify email, reset password | draft |
-| [AUTH-002](AUTH-002-auth-login/story.md) | auth-login | Visitor with an account | Log in and receive a secure session | draft |
-| [AUTH-003](AUTH-003-auth-session-refresh-logout/story.md) | auth-session-refresh-logout | Authenticated user | Silent refresh with replay detection; logout / logout-all | draft |
-| [AUTH-004](AUTH-004-auth-session-management/story.md) | auth-session-management | Authenticated user | List and revoke my own sessions | draft |
-| [AUTH-005](AUTH-005-auth-admin-account-management/story.md) | auth-admin-account-management | SystemAdmin | Suspend accounts, view sessions/events, grant/revoke admin role | draft |
+| [AUTH-001](AUTH-001-auth-registration/story.md) | auth-registration | Unauthenticated visitor | Create an account, verify email, reset password | **run 1 planned** (2026-09-07) — [contract](auth-epic/contract.md) · [plan](auth-epic/plan.md) |
+| [AUTH-002](AUTH-002-auth-login/story.md) | auth-login | Visitor with an account | Log in and receive a secure session | **run 1 planned** — same |
+| [AUTH-003](AUTH-003-auth-session-refresh-logout/story.md) | auth-session-refresh-logout | Authenticated user | Silent refresh with replay detection; logout / logout-all | **run 1 planned** — same |
+| [AUTH-004](AUTH-004-auth-session-management/story.md) | auth-session-management | Authenticated user | List and revoke my own sessions | draft — run 2 |
+| [AUTH-005](AUTH-005-auth-admin-account-management/story.md) | auth-admin-account-management | SystemAdmin | Suspend accounts, view sessions/events, grant/revoke admin role | draft — run 2 |
 
 ## Next available code per area
 

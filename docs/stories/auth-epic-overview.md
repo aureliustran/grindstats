@@ -46,19 +46,38 @@ the same blacklist primitive at a smaller grain, and both admin actions), not a 
 them. Build it before or alongside `auth-registration`'s password-reset piece and
 `auth-admin-account-management`, even though `auth-login` reads first in the epic.
 
+## Implementation runs
+
+The epic is built in two multi-agent runs (`.claude/skills/multi-agent-code-execution/`). The
+run artifacts live in [`auth-epic/`](auth-epic/plan.md) rather than in a story folder, because
+the contract and the partition span three stories at once:
+
+| Run | Covers | Artifacts |
+|---|---|---|
+| **1** | AUTH-001, AUTH-002, AUTH-003, the FR-20..24 gateway chain, `GET /users/me`, and the SPA's real HTTP client. 11 slices in 4 waves | [contract.md](auth-epic/contract.md) (frozen) · [plan.md](auth-epic/plan.md) · [briefs/](auth-epic/briefs/) |
+| **2** | AUTH-004, AUTH-005 — planned after run 1 clears phase 3. Run 1's migrations already create the `status` column and the `AccountStatus` enum admin needs, so run 2 adds no breaking schema change | — |
+
 ## What's still open across the epic
 
-Each story's own "Open questions" section has specifics; the ones that span more than one
-story are worth resolving before implementation starts rather than per-story:
+Each story's own "Open questions" section has specifics. The ones that spanned more than one
+story have now been decided for run 1 — see [`auth-epic/contract.md`](auth-epic/contract.md) §0
+for the reasoning, and [`plan.md`](auth-epic/plan.md) §7 for what remains genuinely open:
 
-- **Refresh grace window** (`auth-session-refresh-logout`): if a legitimate retry can look
-  identical to replay, every story that depends on the epoch mechanism (password reset,
-  session revocation, both admin actions) inherits that ambiguity.
-- **Account deletion** (`auth-admin-account-management`): the SRS specifies suspension but
-  never deletion. Worth deciding whether that's a deliberate omission (health-data retention
-  makes deletion its own, larger story) before an admin UI implies it's missing by accident.
-- **First-SystemAdmin bootstrap**: assumed to be a direct database operation; not stated
-  outright anywhere in the SRS. Confirm before the deployment runbook is written.
+- **Refresh grace window** (`auth-session-refresh-logout`): **resolved for run 1** — none, per
+  the SRS's "immediately". The SPA's single-flight refresh (contract §8.2) is what stops a retry
+  storm from looking like replay. If real-latency testing produces a false replay, that is a
+  contract amendment, not a slice bug.
+- **Suspended-account login response**: **resolved** — the distinct code is returned only after
+  the password verifies (contract D2, `audit-and-errors.md` §7, SRS §3.8).
+- **Account deletion** (`auth-admin-account-management`): still open. The SRS specifies
+  suspension but never deletion. Not in run 2 either unless a story is written — worth deciding
+  whether the omission is deliberate (health-data retention makes deletion its own, larger
+  story) before an admin UI implies it's missing by accident.
+- **First-SystemAdmin bootstrap**: still a direct database operation, still not stated outright
+  in the SRS. Run 2 owns it; run 1 ships the `role` column it needs. Confirm before the
+  deployment runbook is written.
+- **Resending a verification email**: no resend endpoint exists in run 1, which makes an expired
+  link awkward given the enumeration-neutral register response. Needs a story before run 2.
 
 ## Roadmap placement
 
