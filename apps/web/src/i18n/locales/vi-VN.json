@@ -13,6 +13,24 @@
     },
     "error_validation": "Một số trường cần được kiểm tra lại."
   },
+  "app": {
+    "dashboard": {
+      "heading": "Bảng điều khiển",
+      "placeholder": "Chưa có gì để hiển thị. Tính năng ghi nhật ký sẽ có trong một story sau.",
+      "signed_in_as": "Đang đăng nhập với {{email}}",
+      "logout": "Đăng xuất"
+    },
+    "mock_oauth": {
+      "heading": "Màn hình cấp quyền Google (giả lập)",
+      "body": "Trang này thay thế cho màn hình cấp quyền của Google cho đến khi auth-service tồn tại.",
+      "approve": "Đồng ý",
+      "deny": "Từ chối"
+    },
+    "not_found": {
+      "heading": "Không có gì ở đây cả.",
+      "back": "Về trang đầu"
+    }
+  },
   "landing": {
     "meta": {
       "title": "GrindStats — theo dõi khối lượng đã tập, không phải tâm trạng",
@@ -21,14 +39,17 @@
     "nav": {
       "features": "Tính năng",
       "how_it_works": "Cách hoạt động",
+      "numbers": "Con số",
       "pricing": "Bảng giá",
       "login": "Đăng nhập",
       "get_started": "Bắt đầu",
       "menu_open": "Mở menu",
       "menu_close": "Đóng menu",
-      "skip_to_content": "Chuyển đến nội dung"
+      "skip_to_content": "Chuyển đến nội dung",
+      "toggle_theme": "Chuyển giao diện sáng/tối"
     },
     "hero": {
+      "eyebrow": "Chế độ tập luyện",
       "regimen_pushups": "100 CHỐNG ĐẨY",
       "regimen_situps": "100 GẬP BỤNG",
       "regimen_squats": "100 SQUAT",
@@ -37,51 +58,135 @@
       "aside": "(Chẳng ai bảo là nó thú vị cả.)",
       "subhead": "GrindStats ghi lại đúng những gì bạn đã làm, và tính toán một cách trung thực.",
       "cta_primary": "Bắt đầu theo dõi",
-      "silhouette_alt": "Bóng đen của một người đang sải bước"
+      "cta_secondary": "Xem cách hoạt động",
+      "silhouette_alt": "Bóng đen của một người đang sải bước",
+      "backdrop_credit": "Hình nền: One Punch Man — Saitama đối đầu Garou",
+      "bullet_no_hype": "Không phô trương, không màu mè",
+      "bullet_numbers": "Số liệu được tính toán, không phỏng đoán",
+      "bullet_photo": "Ước tính calo từ hai tấm ảnh",
+      "card_occurrence": "Hôm nay · lượt số #{{n}}",
+      "card_title": "Bài tập hằng ngày",
+      "card_streak": "Chuỗi {{streak}} ngày",
+      "card_reps_pushups": "4 × 25",
+      "card_reps_situps": "4 × 25",
+      "card_status_in_progress": "đang thực hiện",
+      "card_reps_run": "~52 phút",
+      "card_energy_label": "Năng lượng tiêu hao · hôm nay",
+      "card_energy_unit": "kcal",
+      "card_estimated": "±15% · ước tính"
     },
     "features": {
       "heading": "Những gì được đo",
+      "eyebrow": "Những gì được đo",
+      "title_pre": "Bốn điều. ",
+      "title_accent": "Đo lường nghiêm túc.",
+      "subhead": "Mọi thứ khác đều được tính toán từ các yếu tố này, có thể kiểm chứng trong mã nguồn.",
       "metrics_title": "Chỉ số cơ thể",
       "metrics_body": "Cân nặng, tỷ lệ mỡ, khối lượng cơ và số đo vòng, theo tần suất mà bạn thực sự duy trì.",
+      "metrics_meta": "τ ≈ 10 ngày, làm mượt theo thời gian",
       "training_title": "Tập luyện",
       "training_body": "Kháng lực tính theo số set hiệu quả cho mỗi nhóm cơ. Cardio tính theo năng lượng tiêu hao, bao gồm cả phần đốt thêm sau buổi tập.",
+      "training_meta": "Mốc khối lượng MEV → MAV → MRV",
       "nutrition_title": "Bữa ăn",
       "nutrition_body": "Chụp đĩa thức ăn từ hai góc. Chỉnh lại ước lượng. Đi tiếp.",
+      "nutrition_meta": "Sai số ±20–30% và vẫn tự triệt tiêu nhau",
       "coaching_title": "Tư vấn",
-      "coaching_body": "Lời khuyên dựa trên chính số liệu của bạn, kèm theo con số đứng sau mỗi đề xuất."
+      "coaching_body": "Lời khuyên dựa trên chính số liệu của bạn, kèm theo con số đứng sau mỗi đề xuất.",
+      "coaching_meta": "8 quy tắc · mô hình chỉ thuật lại, không tự tính toán"
     },
     "how_it_works": {
       "heading": "Cách hoạt động",
+      "eyebrow": "Cách hoạt động",
+      "title_log": "Ghi chép.",
+      "title_accumulate": "Tích lũy.",
+      "title_adapt": "Thích ứng.",
+      "slot_checklist": "IMAGE SLOT 2 · ảnh màn hình ứng dụng · checklist · 1080×1350",
+      "slot_trend": "IMAGE SLOT 3 · ảnh màn hình ứng dụng · biểu đồ xu hướng cân nặng · 1080×1350",
+      "slot_coach": "IMAGE SLOT 4 · ảnh màn hình ứng dụng · tin nhắn tư vấn · 1080×1350",
       "step_log_title": "Ghi lại buổi tập",
-      "step_log_body": "Đánh dấu từng mục khi bạn hoàn thành. Thêm cả những gì bạn tập ngẫu hứng.",
+      "step_log_body": "Đánh dấu từng mục khi bạn hoàn thành. Thêm cả những gì bạn tập ngẫu hứng. Không có gì tự ý thay đổi kế hoạch sau lưng bạn.",
       "step_measure_title": "Để dữ liệu tích lũy",
       "step_measure_body": "Không có đề xuất nào được đưa ra khi chưa đủ 21 ngày dữ liệu. Xu hướng cần thời gian, không cần sự hào hứng.",
+      "step_measure_body_pre": "Không có đề xuất nào được đưa ra khi chưa đủ",
+      "step_measure_body_post": "ngày dữ liệu. Xu hướng cần thời gian, không cần sự hào hứng.",
       "step_adapt_title": "Điều chỉnh",
       "step_adapt_body": "Mức tiêu hao năng lượng của bạn được ước tính từ diễn biến cân nặng thực tế, chứ không phải từ phỏng đoán của một công thức."
     },
+    "numbers": {
+      "eyebrow": "Ví dụ minh họa",
+      "heading_line1": "Dịch vụ tính toán.",
+      "heading_line2": "Mô hình chỉ thuật lại.",
+      "body": "Một khoảng 28 ngày. Ghi thiếu 15% thì ước tính cũng thấp hơn 15% — nên mục tiêu đề ra cũng vậy, và các sai số tự triệt tiêu nhau.",
+      "stat_mean_intake": "Lượng nạp trung bình",
+      "stat_weight_trend": "Xu hướng cân nặng",
+      "stat_from_stores": "Từ dự trữ cơ thể",
+      "stat_adaptive_tdee": "TDEE thích ứng",
+      "unit_kcal_per_day": "kcal/ngày",
+      "unit_kg_per_28d": "kg / 28 ngày",
+      "unit_kcal": "kcal",
+      "ci_note": "Khoảng tin cậy 95%: {{low}}–{{high}}"
+    },
+    "quote": {
+      "line1": "Bạn đã làm việc thật sự.",
+      "line2_pre": "Việc của ứng dụng là ",
+      "line2_emphasis": "ghi lại nó",
+      "line2_post": " một cách chính xác.",
+      "attribution": "Nguyên tắc thiết kế #1, GrindStats",
+      "pin_title": "Ghim Pinterest"
+    },
     "pricing": {
       "heading": "Bảng giá",
-      "placeholder": "Các gói dịch vụ chưa được chốt.",
-      "cta": "Bắt đầu miễn phí"
+      "title": "Gói cước rõ ràng.",
+      "placeholder": "Các gói dịch vụ dự kiến — tính năng đăng ký sẽ ra mắt ở Giai đoạn 9.",
+      "cta": "Bắt đầu miễn phí",
+      "free_title": "Miễn phí",
+      "free_period": "/tháng",
+      "free_feat_1": "Chỉ số cơ thể, tập luyện và nhật ký bữa ăn",
+      "free_feat_2": "Danh sách việc hằng ngày + chuỗi ngày liên tục",
+      "free_feat_3": "Biểu đồ xu hướng",
+      "free_feat_4_muted": "Ước tính từ ảnh",
+      "free_feat_5_muted": "Tư vấn",
+      "pro_badge": "Pro",
+      "pro_title": "Pro",
+      "pro_price_note": "/tháng · Chưa xác định",
+      "pro_feat_1": "Tất cả tính năng của gói Miễn phí",
+      "pro_feat_2": "Ước tính từ ảnh chụp hai góc",
+      "pro_feat_3": "Tư vấn + tổng kết hằng tuần",
+      "pro_feat_4": "TDEE thích ứng",
+      "pro_feat_5": "Dùng khóa API mô hình của riêng bạn",
+      "pro_cta": "Tham gia danh sách chờ"
+    },
+    "cta": {
+      "heading_line1": "Ngày mai",
+      "heading_line2": "lại tiếp tục.",
+      "secondary": "Tôi đã có tài khoản",
+      "slot_texture": "IMAGE SLOT 6 · vân bề mặt (nhựa đường / phấn / bê tông) · 2000×800"
+    },
+    "footer": {
+      "disclaimer": "Ước tính ở cấp độ quần thể, không phải đo lường lâm sàng. BMR ±10 %, mức tiêu hao theo MET ±15–25 %.",
+      "github_aria": "GitHub",
+      "email_aria": "Email"
     },
     "auth": {
       "dialog_label": "Đăng nhập vào GrindStats",
       "tab_login": "Đăng nhập",
       "tab_signup": "Đăng ký",
       "email_label": "Email",
-      "email_placeholder": "ban@example.com",
+      "email_placeholder": "you@example.com",
       "password_label": "Mật khẩu",
+      "password_hint": "Ít nhất {{count}} ký tự. Không yêu cầu ký tự đặc biệt.",
       "submit_login": "Đăng nhập",
       "submit_signup": "Tạo tài khoản",
       "google_cta": "Tiếp tục với Google",
       "divider": "hoặc",
       "error_email_invalid": "Vui lòng nhập địa chỉ email hợp lệ.",
       "error_password_short": "Mật khẩu phải có ít nhất {{count}} ký tự.",
-      "error_credentials": "Email hoặc mật khẩu không đúng.",
-      "error_unreachable": "Không kết nối được tới máy chủ. Vui lòng thử lại.",
-      "error_rate_limited": "Bạn đã thử quá nhiều lần. Vui lòng đợi một lát rồi thử lại.",
+      "error_credentials": "Email hoặc mật khẩu không chính xác.",
+      "error_unreachable": "Không thể kết nối đến máy chủ. Vui lòng thử lại.",
+      "error_rate_limited": "Quá nhiều lần thử. Vui lòng đợi trong giây lát rồi thử lại.",
       "error_google_cancelled": "Đăng nhập bằng Google chưa hoàn tất.",
-      "signup_next_step": "Vui lòng kiểm tra email để xác nhận tài khoản."
+      "signup_next_step": "Kiểm tra email để xác nhận tài khoản của bạn.",
+      "signup_check_inbox": "Chúng tôi đã gửi liên kết xác thực đến email của bạn. Nhấp vào liên kết để xác nhận tài khoản, sau đó đăng nhập."
     }
   }
 }

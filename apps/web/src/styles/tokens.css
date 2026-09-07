@@ -188,6 +188,31 @@
   --z-modal: 400;      /* auth modal */
   --z-toast: 500;
 
+  /* Modal/drawer backdrop — semi-transparent overlay behind the dialog panel.
+     Uses rgb() with no hex so it works in both themes without re-declaring. */
+  --backdrop: rgb(0 0 0 / 0.45);
+
+  /* Landing hero — maximum width of the decorative silhouette figure.
+     Keeps it proportional to the content column without taking over at wide viewports. */
+  --silhouette-max-w: 36rem;
+
+  /* Auth modal — panel width. Wide enough for the longest vi-VN error line at
+     text-sm without wrapping mid-word; narrower than the content column so it
+     reads as an overlay, not a page. */
+  --modal-max-w: 28rem;
+
+  /* Glass surfaces — sticky nav, feature/pricing cards, the auth modal panel.
+     Re-declared per theme below (not derived from --paper-*) because a
+     translucent white reads as "frosted" in both themes; a translucent
+     dark-in-dark reads as murky instead. */
+  --glass-bg: rgb(255 255 255 / 0.6);
+  --glass-border: rgb(255 255 255 / 0.7);
+  --glass-shadow: 0 10px 40px rgb(0 0 0 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.8);
+  /* Accent-tinted glow used behind glass cards and the cursor-follow spotlight
+     inside them (see .u-spotlight in globals.css). Same accent both themes —
+     only its alpha changes, kept in one place so it can't drift from --accent. */
+  --spot: rgb(217 44 13 / 0.18);
+
   /* ---------------------------------------------------------------------------
      LAYOUT
      Breakpoints are documented here but CANNOT be used in media queries —
@@ -243,10 +268,16 @@
     --danger: #ff6b52;
     --muted-data: #6e6e66;
     --low-confidence: #d9a441;
+
+    --glass-bg: rgb(30 30 28 / 0.45);
+    --glass-border: rgb(255 255 255 / 0.12);
+    --glass-shadow: 0 20px 60px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.08);
+    --spot: rgb(255 106 69 / 0.22);
   }
 }
 
-:root[data-theme="dark"] {
+:root[data-theme="dark"],
+.dark {
   --paper-0: #141413;
   --paper-1: #0a0a0a;
   --paper-2: #1f1f1d;
@@ -266,4 +297,9 @@
   --danger: #ff6b52;
   --muted-data: #6e6e66;
   --low-confidence: #d9a441;
+
+  --glass-bg: rgb(30 30 28 / 0.45);
+  --glass-border: rgb(255 255 255 / 0.12);
+  --glass-shadow: 0 20px 60px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.08);
+  --spot: rgb(255 106 69 / 0.22);
 }

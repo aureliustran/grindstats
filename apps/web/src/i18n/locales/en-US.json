@@ -13,6 +13,24 @@
     },
     "error_validation": "Some fields need attention."
   },
+  "app": {
+    "dashboard": {
+      "heading": "Dashboard",
+      "placeholder": "Nothing to show yet. Logging arrives in a later story.",
+      "signed_in_as": "Signed in as {{email}}",
+      "logout": "Log out"
+    },
+    "mock_oauth": {
+      "heading": "Google consent (stand-in)",
+      "body": "This page stands in for Google's consent screen until auth-service exists.",
+      "approve": "Approve",
+      "deny": "Deny"
+    },
+    "not_found": {
+      "heading": "There's nothing here.",
+      "back": "Back to start"
+    }
+  },
   "landing": {
     "meta": {
       "title": "GrindStats — track the work, not the mood",
@@ -21,14 +39,17 @@
     "nav": {
       "features": "Features",
       "how_it_works": "How it works",
+      "numbers": "Numbers",
       "pricing": "Pricing",
       "login": "Log in",
       "get_started": "Get started",
       "menu_open": "Open menu",
       "menu_close": "Close menu",
-      "skip_to_content": "Skip to content"
+      "skip_to_content": "Skip to content",
+      "toggle_theme": "Toggle color theme"
     },
     "hero": {
+      "eyebrow": "The regimen",
       "regimen_pushups": "100 PUSH-UPS",
       "regimen_situps": "100 SIT-UPS",
       "regimen_squats": "100 SQUATS",
@@ -37,32 +58,114 @@
       "aside": "(Nobody said it was interesting.)",
       "subhead": "GrindStats records what you actually did, and does the arithmetic honestly.",
       "cta_primary": "Start tracking",
-      "silhouette_alt": "Silhouette of a figure mid-stride"
+      "cta_secondary": "See how it works",
+      "silhouette_alt": "Silhouette of a figure mid-stride",
+      "backdrop_credit": "Background: One Punch Man — Saitama vs. Garou",
+      "bullet_no_hype": "No hype, no confetti",
+      "bullet_numbers": "Numbers computed, not guessed",
+      "bullet_photo": "Photo-to-calories in two shots",
+      "card_occurrence": "Today · occurrence #{{n}}",
+      "card_title": "Daily regimen",
+      "card_streak": "{{streak}}-day streak",
+      "card_reps_pushups": "4 × 25",
+      "card_reps_situps": "4 × 25",
+      "card_status_in_progress": "in progress",
+      "card_reps_run": "~52 min",
+      "card_energy_label": "Energy out · today",
+      "card_energy_unit": "kcal",
+      "card_estimated": "±15% · estimated"
     },
     "features": {
       "heading": "What it measures",
+      "eyebrow": "What it measures",
+      "title_pre": "Four things. ",
+      "title_accent": "Measured properly.",
+      "subhead": "Everything else is derived from these, deterministically, in code you can audit.",
       "metrics_title": "Body metrics",
       "metrics_body": "Weight, body fat, muscle mass and circumferences, at whatever cadence you actually keep.",
+      "metrics_meta": "τ ≈ 10 d time-domain smoothing",
       "training_title": "Training",
       "training_body": "Resistance work by hard sets per muscle. Cardio by energy cost, afterburn included.",
+      "training_meta": "MEV → MAV → MRV volume landmarks",
       "nutrition_title": "Meals",
       "nutrition_body": "Photograph the plate from two angles. Correct the estimate. Move on.",
+      "nutrition_meta": "±20–30% and it still cancels out",
       "coaching_title": "Coaching",
-      "coaching_body": "Advice built from your own numbers, with the number behind every recommendation shown."
+      "coaching_body": "Advice built from your own numbers, with the number behind every recommendation shown.",
+      "coaching_meta": "8 rules · the model narrates, never calculates"
     },
     "how_it_works": {
       "heading": "How it works",
+      "eyebrow": "How it works",
+      "title_log": "Log.",
+      "title_accumulate": "Accumulate.",
+      "title_adapt": "Adapt.",
+      "slot_checklist": "IMAGE SLOT 2 · app screenshot · checklist · 1080×1350",
+      "slot_trend": "IMAGE SLOT 3 · app screenshot · weight trend chart · 1080×1350",
+      "slot_coach": "IMAGE SLOT 4 · app screenshot · coach message · 1080×1350",
       "step_log_title": "Log the work",
-      "step_log_body": "Check off each task as you finish it. Add what you improvised.",
+      "step_log_body": "Check off each task as you finish it. Add what you improvised. Nothing mutates the plan behind your back.",
       "step_measure_title": "Let it accumulate",
       "step_measure_body": "Nothing is prescribed on fewer than 21 days of data. Trends need time, not enthusiasm.",
+      "step_measure_body_pre": "Nothing is prescribed on fewer than",
+      "step_measure_body_post": "days of data. Trends need time, not enthusiasm.",
       "step_adapt_title": "Adapt",
       "step_adapt_body": "Your energy expenditure is estimated from what actually happened to your weight, not from a formula's guess."
     },
+    "numbers": {
+      "eyebrow": "Worked example",
+      "heading_line1": "Services compute.",
+      "heading_line2": "The model narrates.",
+      "body": "A 28-day window. Under-log by 15% and the estimate is 15% low — so the prescribed target is too, and the errors cancel.",
+      "stat_mean_intake": "Mean intake",
+      "stat_weight_trend": "Weight trend",
+      "stat_from_stores": "From stores",
+      "stat_adaptive_tdee": "Adaptive TDEE",
+      "unit_kcal_per_day": "kcal/d",
+      "unit_kg_per_28d": "kg / 28 d",
+      "unit_kcal": "kcal",
+      "ci_note": "95% CI {{low}}–{{high}}"
+    },
+    "quote": {
+      "line1": "You did the work.",
+      "line2_pre": "The app's job is to ",
+      "line2_emphasis": "write it down",
+      "line2_post": " correctly.",
+      "attribution": "Design principle #1, GrindStats",
+      "pin_title": "Pinterest pin"
+    },
     "pricing": {
       "heading": "Pricing",
-      "placeholder": "Plans aren't finalised yet.",
-      "cta": "Get started free"
+      "title": "Plain plans.",
+      "placeholder": "Placeholder tiers — subscription arrives in Phase 9.",
+      "cta": "Get started free",
+      "free_title": "Free",
+      "free_period": "/mo",
+      "free_feat_1": "Metrics, training and meal logs",
+      "free_feat_2": "Daily checklist + streaks",
+      "free_feat_3": "Trend charts",
+      "free_feat_4_muted": "Photo estimation",
+      "free_feat_5_muted": "Coaching",
+      "pro_badge": "Pro",
+      "pro_title": "Pro",
+      "pro_price_note": "/mo · TBD",
+      "pro_feat_1": "Everything in Free",
+      "pro_feat_2": "Two-angle photo estimation",
+      "pro_feat_3": "Coaching + weekly insight",
+      "pro_feat_4": "Adaptive TDEE",
+      "pro_feat_5": "Bring your own model key",
+      "pro_cta": "Join the waitlist"
+    },
+    "cta": {
+      "heading_line1": "Tomorrow",
+      "heading_line2": "again.",
+      "secondary": "I already have an account",
+      "slot_texture": "IMAGE SLOT 6 · texture (asphalt / chalk / concrete) · 2000×800"
+    },
+    "footer": {
+      "disclaimer": "Population-level estimates, not clinical measurement. BMR ±10 %, MET-based expenditure ±15–25 %.",
+      "github_aria": "GitHub",
+      "email_aria": "Email"
     },
     "auth": {
       "dialog_label": "Sign in to GrindStats",
@@ -71,6 +174,7 @@
       "email_label": "Email",
       "email_placeholder": "you@example.com",
       "password_label": "Password",
+      "password_hint": "At least {{count}} characters. No symbol rules.",
       "submit_login": "Log in",
       "submit_signup": "Create account",
       "google_cta": "Continue with Google",
@@ -81,7 +185,8 @@
       "error_unreachable": "We couldn't reach the server. Try again.",
       "error_rate_limited": "Too many attempts. Wait a moment and try again.",
       "error_google_cancelled": "Sign-in with Google wasn't completed.",
-      "signup_next_step": "Check your email to confirm your account."
+      "signup_next_step": "Check your email to confirm your account.",
+      "signup_check_inbox": "We sent a verification link to your email. Click it to confirm your account, then log in."
     }
   }
 }

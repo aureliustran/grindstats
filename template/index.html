@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GrindStats — track the work, not the mood</title>
+  <meta name="description" content="Body metrics, resistance and cardio training, and meal logging — measured properly, every single day." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            paper: { 0: "var(--paper-0)", 1: "var(--paper-1)", 2: "var(--paper-2)", 3: "var(--paper-3)" },
+            ink:   { 0: "var(--ink-0)",   1: "var(--ink-1)",   2: "var(--ink-2)",   3: "var(--ink-3)" },
+            accent: { DEFAULT: "var(--accent)", hover: "var(--accent-hover)", ink: "var(--accent-ink)" },
+          },
+          fontFamily: {
+            display: ['"Big Shoulders Display"', "Impact", "sans-serif"],
+            body: ['"IBM Plex Sans"', "system-ui", "sans-serif"],
+            mono: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body class="bg-paper-1 text-ink-1 font-body antialiased overflow-x-hidden">
+  <!-- Film grain + ambient glow (pure CSS/SVG, no image needed) -->
+  <div class="grain" aria-hidden="true"></div>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <a href="#main" class="skip-link">Skip to content</a>
+
+  <!-- ====================================================== HEADER -->
+  <header class="fixed inset-x-0 top-0 z-50 px-4 pt-4">
+    <nav class="glass mx-auto flex max-w-6xl items-center justify-between rounded-2xl px-5 py-3" aria-label="Primary">
+      <a href="#" class="flex items-center gap-2 font-display text-2xl font-black tracking-tight text-ink-0">
+        <span class="grid h-8 w-8 place-items-center rounded-lg bg-accent text-accent-ink">
+          <i data-lucide="activity" class="h-4 w-4"></i>
+        </span>
+        GrindStats
+      </a>
+
+      <ul class="hidden items-center gap-1 md:flex">
+        <li><a class="nav-link" href="#features">Features</a></li>
+        <li><a class="nav-link" href="#how">How it works</a></li>
+        <li><a class="nav-link" href="#numbers">Numbers</a></li>
+        <li><a class="nav-link" href="#pricing">Pricing</a></li>
+      </ul>
+
+      <div class="hidden items-center gap-2 md:flex">
+        <button id="themeToggle" class="icon-btn" aria-label="Toggle theme">
+          <i data-lucide="sun" class="h-4 w-4 hidden dark:block"></i>
+          <i data-lucide="moon" class="h-4 w-4 dark:hidden"></i>
+        </button>
+        <button class="btn-ghost" data-open-auth="login">Log in</button>
+        <button class="btn-primary" data-open-auth="signup">
+          Get started <i data-lucide="arrow-right" class="h-4 w-4"></i>
+        </button>
+      </div>
+
+      <button id="menuBtn" class="icon-btn md:hidden" aria-expanded="false" aria-controls="mobileMenu" aria-label="Open menu">
+        <i data-lucide="menu" class="h-5 w-5"></i>
+      </button>
+    </nav>
+
+    <div id="mobileMenu" class="glass mx-auto mt-2 hidden max-w-6xl rounded-2xl p-4 md:hidden">
+      <ul class="flex flex-col gap-1">
+        <li><a class="nav-link block" href="#features">Features</a></li>
+        <li><a class="nav-link block" href="#how">How it works</a></li>
+        <li><a class="nav-link block" href="#numbers">Numbers</a></li>
+        <li><a class="nav-link block" href="#pricing">Pricing</a></li>
+      </ul>
+      <div class="mt-3 flex gap-2 border-t border-paper-3/40 pt-3">
+        <button class="btn-ghost flex-1" data-open-auth="login">Log in</button>
+        <button class="btn-primary flex-1" data-open-auth="signup">Get started</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- ====================================================== HERO -->
+    <section class="relative min-h-screen overflow-hidden pt-36 pb-24">
+      <!-- IMAGE SLOT 1: hero backdrop. Filled with a video per explicit
+           direction — real One Punch Man footage (Saitama vs. Garou), used
+           here as permanent template content overriding design-system.md §5 /
+           HANDOFF.md §12.1. See template/README.md "Media" for the caveat
+           this overrides and why it must never reach apps/web. -->
+      <div class="img-slot hero-bg absolute inset-0 -z-10" data-slot="hero-backdrop" data-parallax="0.15">
+        <video
+          class="hero-bg__video"
+          src="./media/saitama-vs-garou.mp4"
+          autoplay
+          loop
+          muted
+          playsinline
+          aria-hidden="true"
+        ></video>
+      </div>
+      <!-- Fades to the theme's paper color only at the very bottom, for a
+           clean handoff into the Features section. Legibility over the video
+           itself is the fixed scrim above (.hero-bg::after), not this. -->
+      <div class="absolute inset-0 -z-10" style="background: linear-gradient(180deg, transparent 0%, transparent 78%, var(--paper-1) 100%)"></div>
+
+      <!-- Hero copy sits on the video, in both themes, so its color is fixed
+           (white) rather than token-based (--ink-*) — the tokens assume a flat
+           paper background, which this section deliberately isn't. -->
+      <div class="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-6 text-white lg:grid-cols-[1.2fr_1fr]">
+        <div>
+          <p class="reveal eyebrow"><i data-lucide="calendar-check" class="h-3.5 w-3.5"></i> The regimen</p>
+
+          <h1 class="reveal font-display text-[clamp(3rem,9vw,7.5rem)] font-black uppercase leading-[0.9] tracking-tight text-white">
+            <span class="block">100 push-ups</span>
+            <span class="block">100 sit-ups</span>
+            <span class="block">100 squats</span>
+            <span class="block">10km run</span>
+            <span class="block text-accent glow-text">Every single day</span>
+          </h1>
+
+          <p class="reveal mt-4 max-w-md font-mono text-sm italic text-white/60">(Nobody said it was interesting.)</p>
+          <p class="reveal mt-6 max-w-lg text-lg text-white/85">
+            GrindStats records what you <em class="not-italic text-white underline decoration-accent decoration-2 underline-offset-4">actually did</em>,
+            and does the arithmetic honestly.
+          </p>
+
+          <div class="reveal mt-8 flex flex-wrap items-center gap-3">
+            <button class="btn-primary btn-lg magnetic" data-open-auth="signup">
+              Start tracking <i data-lucide="arrow-right" class="h-4 w-4"></i>
+            </button>
+            <a href="#how" class="btn-ghost btn-lg">
+              <i data-lucide="play" class="h-4 w-4"></i> See how it works
+            </a>
+          </div>
+
+          <ul class="reveal mt-10 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/70">
+            <li class="flex items-center gap-2"><i data-lucide="shield-check" class="h-4 w-4 text-accent"></i> No hype, no confetti</li>
+            <li class="flex items-center gap-2"><i data-lucide="sigma" class="h-4 w-4 text-accent"></i> Numbers computed, not guessed</li>
+            <li class="flex items-center gap-2"><i data-lucide="camera" class="h-4 w-4 text-accent"></i> Photo-to-calories in two shots</li>
+          </ul>
+        </div>
+
+        <!-- Glass "live checklist" card -->
+        <div class="reveal relative">
+          <div class="absolute -inset-6 -z-10 rounded-[2rem] bg-accent/20 blur-3xl"></div>
+          <div class="glass-card spotlight tilt rounded-3xl p-6" data-tilt>
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-widest text-ink-2">Today · occurrence #<span class="font-mono">214</span></p>
+                <h3 class="font-display text-2xl font-black uppercase text-ink-0">Daily regimen</h3>
+              </div>
+              <span class="badge"><i data-lucide="flame" class="h-3.5 w-3.5"></i> <span class="font-mono" data-count="214">0</span>-day streak</span>
+            </div>
+
+            <ul class="mt-5 space-y-2">
+              <li class="check-row is-done"><i data-lucide="check-square" class="h-5 w-5"></i><span>100 push-ups</span><span class="ml-auto font-mono text-xs text-ink-2">4 × 25</span></li>
+              <li class="check-row is-done"><i data-lucide="check-square" class="h-5 w-5"></i><span>100 sit-ups</span><span class="ml-auto font-mono text-xs text-ink-2">4 × 25</span></li>
+              <li class="check-row is-active"><i data-lucide="square" class="h-5 w-5"></i><span>100 squats</span><span class="ml-auto font-mono text-xs text-accent">in progress</span></li>
+              <li class="check-row"><i data-lucide="square" class="h-5 w-5"></i><span>10 km run</span><span class="ml-auto font-mono text-xs text-ink-2">~52 min</span></li>
+            </ul>
+
+            <div class="mt-5 rounded-xl border border-paper-3/40 bg-paper-0/40 p-4">
+              <div class="flex items-end justify-between">
+                <div>
+                  <p class="text-xs text-ink-2">Energy out · today</p>
+                  <p class="font-mono text-3xl font-semibold text-ink-0"><span data-count="1842">0</span> <span class="text-base text-ink-2">kcal</span></p>
+                </div>
+                <p class="estimated text-xs">±15 % · estimated</p>
+              </div>
+              <div class="mt-3 h-2 overflow-hidden rounded-full bg-paper-3/50">
+                <div class="progress h-full rounded-full bg-accent" style="--to: 68%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Marquee ticker -->
+      <div class="ticker mt-20 border-y border-paper-3/40 bg-paper-0/30 py-3 backdrop-blur" aria-hidden="true">
+        <div class="ticker__track font-display text-2xl font-black uppercase tracking-wide text-ink-2">
+          <span>100 push-ups</span><span class="dot"></span><span>100 sit-ups</span><span class="dot"></span><span>100 squats</span><span class="dot"></span><span>10km run</span><span class="dot"></span><span class="text-accent">every single day</span><span class="dot"></span>
+          <span>100 push-ups</span><span class="dot"></span><span>100 sit-ups</span><span class="dot"></span><span>100 squats</span><span class="dot"></span><span>10km run</span><span class="dot"></span><span class="text-accent">every single day</span><span class="dot"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== FEATURES -->
+    <section id="features" class="scroll-mt-28 py-24">
+      <div class="mx-auto max-w-6xl px-6">
+        <div class="reveal max-w-2xl">
+          <p class="eyebrow"><i data-lucide="ruler" class="h-3.5 w-3.5"></i> What it measures</p>
+          <h2 class="section-title">Four things. <span class="text-accent">Measured properly.</span></h2>
+          <p class="mt-4 text-ink-2">Everything else is derived from these, deterministically, in code you can audit.</p>
+        </div>
+
+        <div class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <article class="reveal glass-card spotlight feature rounded-2xl p-6">
+            <div class="feature__icon"><i data-lucide="scale" class="h-6 w-6"></i></div>
+            <h3>Body metrics</h3>
+            <p>Weight, body fat, muscle mass and circumferences, at whatever cadence you actually keep.</p>
+            <p class="feature__meta"><span class="font-mono">τ ≈ 10 d</span> time-domain smoothing</p>
+          </article>
+          <article class="reveal glass-card spotlight feature rounded-2xl p-6" style="--d: 80ms">
+            <div class="feature__icon"><i data-lucide="dumbbell" class="h-6 w-6"></i></div>
+            <h3>Training</h3>
+            <p>Resistance by hard sets per muscle. Cardio by energy cost, afterburn included.</p>
+            <p class="feature__meta"><span class="font-mono">MEV → MAV → MRV</span> volume landmarks</p>
+          </article>
+          <article class="reveal glass-card spotlight feature rounded-2xl p-6" style="--d: 160ms">
+            <div class="feature__icon"><i data-lucide="camera" class="h-6 w-6"></i></div>
+            <h3>Meals</h3>
+            <p>Photograph the plate from two angles. Correct the estimate. Move on.</p>
+            <p class="feature__meta"><span class="font-mono">±20–30 %</span> and it still cancels out</p>
+          </article>
+          <article class="reveal glass-card spotlight feature rounded-2xl p-6" style="--d: 240ms">
+            <div class="feature__icon"><i data-lucide="brain-circuit" class="h-6 w-6"></i></div>
+            <h3>Coaching</h3>
+            <p>Advice built from your own numbers, with the number behind every recommendation shown.</p>
+            <p class="feature__meta"><span class="font-mono">8 rules</span> · the model narrates, never calculates</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== HOW IT WORKS -->
+    <section id="how" class="scroll-mt-28 py-24">
+      <div class="mx-auto max-w-6xl px-6">
+        <div class="reveal max-w-2xl">
+          <p class="eyebrow"><i data-lucide="route" class="h-3.5 w-3.5"></i> How it works</p>
+          <h2 class="section-title">Log. <span class="text-ink-3">Accumulate.</span> Adapt.</h2>
+        </div>
+
+        <ol class="mt-12 grid gap-6 lg:grid-cols-3">
+          <li class="reveal step">
+            <div class="img-slot step__shot" data-slot="screen-checklist">
+              <span class="img-slot__label">IMAGE SLOT 2 · app screenshot · checklist · 1080×1350</span>
+            </div>
+            <div class="step__num font-mono">01</div>
+            <h3>Log the work</h3>
+            <p>Check off each task as you finish it. Add what you improvised. Nothing mutates the plan behind your back.</p>
+          </li>
+          <li class="reveal step" style="--d: 120ms">
+            <div class="img-slot step__shot" data-slot="screen-trend">
+              <span class="img-slot__label">IMAGE SLOT 3 · app screenshot · weight trend chart · 1080×1350</span>
+            </div>
+            <div class="step__num font-mono">02</div>
+            <h3>Let it accumulate</h3>
+            <p>Nothing is prescribed on fewer than <span class="font-mono text-ink-0">21</span> days of data. Trends need time, not enthusiasm.</p>
+          </li>
+          <li class="reveal step" style="--d: 240ms">
+            <div class="img-slot step__shot" data-slot="screen-coach">
+              <span class="img-slot__label">IMAGE SLOT 4 · app screenshot · coach message · 1080×1350</span>
+            </div>
+            <div class="step__num font-mono">03</div>
+            <h3>Adapt</h3>
+            <p>Your energy expenditure is estimated from what actually happened to your weight, not from a formula's guess.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ====================================================== NUMBERS -->
+    <section id="numbers" class="scroll-mt-28 py-24">
+      <div class="mx-auto max-w-6xl px-6">
+        <div class="glass-card reveal relative overflow-hidden rounded-3xl p-8 md:p-12">
+          <div class="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent/25 blur-3xl"></div>
+          <div class="grid gap-10 md:grid-cols-[1fr_1.2fr] md:items-center">
+            <div>
+              <p class="eyebrow"><i data-lucide="calculator" class="h-3.5 w-3.5"></i> Worked example</p>
+              <h2 class="section-title">Services compute.<br /><span class="text-ink-3">The model narrates.</span></h2>
+              <p class="mt-4 text-ink-2">A 28-day window. Under-log by 15 % and the estimate is 15 % low — so the prescribed target is too, and the errors cancel.</p>
+            </div>
+            <dl class="grid grid-cols-2 gap-4">
+              <div class="stat"><dt>Mean intake</dt><dd><span data-count="2400">0</span><small>kcal/d</small></dd></div>
+              <div class="stat"><dt>Weight trend</dt><dd>−<span data-count="0.8" data-decimals="1">0</span><small>kg / 28 d</small></dd></div>
+              <div class="stat"><dt>From stores</dt><dd><span data-count="6160">0</span><small>kcal</small></dd></div>
+              <div class="stat stat--accent"><dt>Adaptive TDEE</dt><dd><span data-count="2620">0</span><small>kcal/d</small></dd><p class="estimated mt-1 text-xs">95 % CI 2 396 – 2 844</p></div>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== VOICE / QUOTE -->
+    <section class="py-24">
+      <div class="mx-auto max-w-6xl px-6">
+        <div class="grid items-center gap-10 md:grid-cols-2">
+          <!-- IMAGE SLOT 5: filled with a Pinterest pin embed. The iframe is a
+               fixed 345×714 box (Pinterest's own size, not ours), so it's
+               wrapped and JS-scaled to the column width rather than stretched
+               — see .pin-embed / scalePinEmbeds() in app.js. -->
+          <div class="reveal pin-embed-wrap mx-auto" data-slot="portrait">
+            <div class="pin-embed spotlight glass-card overflow-hidden rounded-3xl" data-scale-embed>
+              <iframe
+                src="https://assets.pinterest.com/ext/embed.html?id=941041284670461441"
+                width="345"
+                height="714"
+                frameborder="0"
+                scrolling="no"
+                title="Pinterest pin"
+                loading="lazy"
+              ></iframe>
+            </div>
+          </div>
+          <blockquote class="reveal">
+            <p class="font-display text-4xl font-black uppercase leading-none text-ink-0 md:text-6xl">
+              "You did the work.<br />The app's job is to <span class="text-accent">write it down</span> correctly."
+            </p>
+            <footer class="mt-6 flex items-center gap-3 text-sm text-ink-2">
+              <span class="img-slot h-10 w-10 rounded-full" data-slot="avatar"></span>
+              — Design principle #1, GrindStats
+            </footer>
+          </blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== PRICING -->
+    <section id="pricing" class="scroll-mt-28 py-24">
+      <div class="mx-auto max-w-6xl px-6">
+        <div class="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+          <div>
+            <div class="reveal">
+              <p class="eyebrow"><i data-lucide="tag" class="h-3.5 w-3.5"></i> Pricing</p>
+              <h2 class="section-title">Plain plans.</h2>
+              <p class="mt-2 text-ink-2">Placeholder tiers — subscription arrives in Phase 9.</p>
+            </div>
+
+            <div class="mt-10 grid gap-4 sm:grid-cols-2">
+              <article class="reveal glass-card spotlight price rounded-3xl p-8">
+                <h3>Free</h3>
+                <p class="price__amt"><span class="font-mono">0</span><small>/mo</small></p>
+                <ul>
+                  <li><i data-lucide="check" class="h-4 w-4"></i> Metrics, training and meal logs</li>
+                  <li><i data-lucide="check" class="h-4 w-4"></i> Daily checklist + streaks</li>
+                  <li><i data-lucide="check" class="h-4 w-4"></i> Trend charts</li>
+                  <li class="muted"><i data-lucide="minus" class="h-4 w-4"></i> Photo estimation</li>
+                  <li class="muted"><i data-lucide="minus" class="h-4 w-4"></i> Coaching</li>
+                </ul>
+                <button class="btn-ghost mt-6 w-full" data-open-auth="signup">Get started free</button>
+              </article>
+              <article class="reveal glass-card spotlight price price--featured rounded-3xl p-8" style="--d: 120ms">
+                <span class="badge absolute right-6 top-6"><i data-lucide="sparkles" class="h-3.5 w-3.5"></i> Pro</span>
+                <h3>Pro</h3>
+                <p class="price__amt"><span class="font-mono">—</span><small>/mo · TBD</small></p>
+                <ul>
+                  <li><i data-lucide="check" class="h-4 w-4"></i> Everything in Free</li>
+                  <li><i data-lucide="check" class="h-4 w-4"></i> Two-angle photo estimation</li>
+                  <li><i data-lucide="check" class="h-4 w-4"></i> Coaching + weekly insight</li>
+                  <li><i data-lucide="check" class="h-4 w-4"></i> Adaptive TDEE</li>
+                  <li><i data-lucide="check" class="h-4 w-4"></i> Bring your own model key</li>
+                </ul>
+                <button class="btn-primary mt-6 w-full" data-open-auth="signup">Join the waitlist</button>
+              </article>
+            </div>
+          </div>
+
+          <!-- IMAGE SLOT 7: pricing side art. Filled with media/download.jpg —
+               real illustrated One Punch Man character art, same explicit
+               override as image slot 1; see README "Media". -->
+          <div class="reveal relative" style="--d: 60ms">
+            <div class="absolute -inset-8 -z-10 rounded-[2rem] bg-accent/15 blur-3xl"></div>
+            <div class="img-slot pricing-art relative aspect-[3/4] overflow-hidden rounded-3xl" data-slot="pricing-side">
+              <img src="./media/download.jpg" alt="" aria-hidden="true" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== FINAL CTA -->
+    <section class="pb-24">
+      <div class="mx-auto max-w-6xl px-6">
+        <div class="reveal relative overflow-hidden rounded-3xl bg-ink-0 p-10 text-paper-1 md:p-16">
+          <div class="absolute inset-0 opacity-30 mix-blend-screen">
+            <div class="img-slot h-full w-full rounded-none" data-slot="cta-texture"><span class="img-slot__label">IMAGE SLOT 6 · texture (asphalt / chalk / concrete) · 2000×800</span></div>
+          </div>
+          <div class="relative">
+            <p class="font-display text-5xl font-black uppercase leading-none md:text-7xl">Tomorrow<br /><span class="text-accent">again.</span></p>
+            <div class="mt-8 flex flex-wrap gap-3">
+              <button class="btn-primary btn-lg magnetic" data-open-auth="signup">Start tracking <i data-lucide="arrow-right" class="h-4 w-4"></i></button>
+              <button class="btn-ghost btn-lg !border-paper-1/30 !text-paper-1" data-open-auth="login">I already have an account</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-paper-3/40 py-10 text-sm text-ink-2">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6">
+      <p class="font-display text-lg font-black text-ink-0">GrindStats</p>
+      <p>Population-level estimates, not clinical measurement. BMR ±10 %, MET-based expenditure ±15–25 %.</p>
+      <div class="flex gap-3">
+        <a class="icon-btn" href="#" aria-label="GitHub"><i data-lucide="github" class="h-4 w-4"></i></a>
+        <a class="icon-btn" href="#" aria-label="Email"><i data-lucide="mail" class="h-4 w-4"></i></a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ====================================================== AUTH MODAL -->
+  <div id="authModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="modal__backdrop" data-close-auth></div>
+    <div class="glass-card modal__panel rounded-3xl p-6 md:p-8">
+      <button class="icon-btn absolute right-4 top-4" data-close-auth aria-label="Close"><i data-lucide="x" class="h-4 w-4"></i></button>
+      <h2 id="authTitle" class="font-display text-3xl font-black uppercase text-ink-0">Sign in to GrindStats</h2>
+
+      <div class="segmented mt-5" role="tablist">
+        <button role="tab" data-tab="login" aria-selected="true">Log in</button>
+        <button role="tab" data-tab="signup" aria-selected="false">Sign up</button>
+        <span class="segmented__thumb" aria-hidden="true"></span>
+      </div>
+
+      <form class="mt-6 space-y-4" novalidate>
+        <label class="field">
+          <span>Email</span>
+          <div class="field__input"><i data-lucide="mail" class="h-4 w-4"></i><input type="email" placeholder="you@example.com" autocomplete="email" /></div>
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <div class="field__input"><i data-lucide="lock" class="h-4 w-4"></i><input type="password" placeholder="••••••••••" autocomplete="current-password" /></div>
+          <small class="text-ink-2">At least <span class="font-mono">10</span> characters. No symbol rules.</small>
+        </label>
+        <button type="submit" class="btn-primary btn-lg w-full" data-submit-label>Log in <i data-lucide="arrow-right" class="h-4 w-4"></i></button>
+      </form>
+
+      <div class="my-5 flex items-center gap-3 text-xs uppercase tracking-widest text-ink-3">
+        <span class="h-px flex-1 bg-paper-3/60"></span> or <span class="h-px flex-1 bg-paper-3/60"></span>
+      </div>
+
+      <button class="btn-ghost w-full">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.6 12.2c0-.7-.1-1.3-.2-1.9H12v3.7h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3Z"/><path fill="currentColor" opacity=".7" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22Z"/><path fill="currentColor" opacity=".5" d="M6.4 14a6 6 0 0 1 0-3.9V7.5H3.1a10 10 0 0 0 0 9l3.3-2.5Z"/><path fill="currentColor" opacity=".85" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.8-2.8A10 10 0 0 0 3.1 7.5L6.4 10C7.2 7.8 9.4 6 12 6Z"/></svg>
+        Continue with Google
+      </button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

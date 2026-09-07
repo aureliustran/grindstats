@@ -60,9 +60,41 @@ visitor in this state has no app destinations, so none are shown.
 - Roadmap sequencing: Phase 1 delivers a stubbed login; real JWT + Redis + Google OAuth2
   arrives in Phase 2. The landing page ships against the stub and swaps to real auth
   without markup changes — only the auth context implementation moves.
-- **Likeness constraint:** the silhouette is an original GrindStats asset. It must not
-  depict, be modeled on, or be recognizable as any real person or existing fictional
-  character. This is a hard requirement on the asset, not a style preference.
+- **Silhouette:** an original, hand-authored GrindStats asset (see run 2 below and
+  `docs/design-system.md` §5). The landing page also uses licensed third-party media
+  (hero video, pricing art, Pinterest embed) alongside it.
+
+## Implementation notes (run 2, 2026-09-06)
+
+Full visual redesign ported from `template/` into the real app: glass-morphism nav/cards,
+scroll-reveal, animated counters, a Numbers (worked-example) section, and an expanded
+Pricing section — none of that touches the contract or the auth flow from run 1.
+
+The hero backdrop is real *One Punch Man* footage, the Pricing section includes real
+illustrated OPM character art, and the Quote section embeds a live Pinterest pin. All
+three ship in `apps/web`, not just `template/` (see `docs/design-system.md` §5).
+
+New tokens: `--glass-bg`, `--glass-border`, `--glass-shadow`, `--spot` (tokens.css), plus
+`media-fg` / `media-scrim` in `tailwind.config.js` — fixed, non-themed colors, sanctioned
+only for content overlaid on the hero's photo/video backdrop (see the comment there).
+
+## Implementation notes (run 1, 2026-09-06)
+
+Feature contract, scope decision and amendments: [`contract.md`](contract.md). Executor
+briefs: [`briefs/`](briefs/). Delivered: the React slice (`apps/web/src/features/landing/`),
+the shell (`apps/web/src/app/`) and a **mock** auth client (`apps/web/src/api/auth.ts`)
+implementing the full SRS-AUTH-001 request/response shapes; no backend yet.
+
+Story amendments recorded in the contract that affect the acceptance criteria above:
+
+- **Registration does not auto-authenticate** (contract §0.1). SRS FR-08 wins over the
+  "new visitor registers and reaches the dashboard" scenario: `POST /register` returns the
+  same neutral 202 whether or not the email exists, the modal shows the "check your email"
+  next step, and the visitor logs in via the Log in tab. TC-06 is satisfied through login.
+- **Session probe** is `GET /api/v1/users/me` → `{ user, csrf_token }` (contract §0.2,
+  §0.4) — not in SRS §3.7; needs adding to the SRS / user-service spec.
+- **Google OAuth** is exercised against a stand-in consent page at `/__mock/oauth/google`
+  until auth-service exists (contract §0.3). TC-08/09 pass against the stand-in.
 
 ## Open questions
 

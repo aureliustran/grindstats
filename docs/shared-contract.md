@@ -158,7 +158,11 @@ reachable from here in one hop.
 | [`stories/index.md`](stories/index.md) | Every user story, by code, with acceptance criteria and test cases |
 | [`stories/auth-epic-overview.md`](stories/auth-epic-overview.md) | How the five auth stories relate and depend on each other |
 | [`blueprint-url.txt`](blueprint-url.txt) | Link to the published architecture blueprint (the overall source of truth) |
-| `.claude/skills/multi-agent-code-execution/` | How work spanning these boundaries is partitioned across parallel agents, and the amendment protocol in §4 |
+| `.claude/skills/multi-agent-code-execution/` | The four-phase pipeline for work spanning these boundaries (instruction → execution → testing → bug fixing), the gates between phases, and the run folder the story folder |
+| `.claude/skills/multi-agent-instruction/` | Phase 1: contract freeze, slice partitioning with disjoint ownership, executor briefs; owns the amendment protocol in §4 |
+| `.claude/skills/multi-agent-execution/` | Phase 2: executor rules, stop-and-escalate, frontend/backend slice references |
+| `.claude/skills/multi-agent-testing/` | Phase 3: contract conformance, story test cases, end-to-end path; defect reports, no code changes |
+| `.claude/skills/multi-agent-bug-fixing/` | Phase 4: scoped fix briefs, regression-test-first fixes, retest hand-back |
 
 **Adding a specification?** Link it here in the same commit that creates it. A document
 nobody can find from this table is a document that will be contradicted by someone who
