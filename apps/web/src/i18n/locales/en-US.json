@@ -11,7 +11,9 @@
       "error_csrf": "That request couldn't be verified. Reload the page and try again.",
       "error_suspended": "This account is suspended."
     },
-    "error_validation": "Some fields need attention."
+    "error_validation": "Some fields need attention.",
+    "error_service_unavailable": "GrindStats is briefly unavailable. Try again in a moment.",
+    "error_internal": "Something went wrong. Try again."
   },
   "app": {
     "dashboard": {

@@ -11,7 +11,9 @@
       "error_csrf": "Không xác minh được yêu cầu. Vui lòng tải lại trang và thử lại.",
       "error_suspended": "Tài khoản này đã bị tạm khóa."
     },
-    "error_validation": "Một số trường cần được kiểm tra lại."
+    "error_validation": "Một số trường cần được kiểm tra lại.",
+    "error_service_unavailable": "GrindStats tạm thời không truy cập được. Vui lòng thử lại sau giây lát.",
+    "error_internal": "Đã xảy ra lỗi. Vui lòng thử lại."
   },
   "app": {
     "dashboard": {

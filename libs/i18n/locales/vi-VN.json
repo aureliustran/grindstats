@@ -7,6 +7,8 @@
     "AUTH_CSRF_FAILED": "Không xác minh được yêu cầu. Vui lòng tải lại trang và thử lại.",
     "AUTH_ACCOUNT_SUSPENDED": "Tài khoản này đã bị tạm khóa.",
     "AUTH_RATE_LIMITED": "Bạn đã thử quá nhiều lần. Vui lòng đợi một lát rồi thử lại.",
-    "VALIDATION_FAILED": "Yêu cầu chứa các trường không hợp lệ."
+    "VALIDATION_FAILED": "Yêu cầu chứa các trường không hợp lệ.",
+    "SERVICE_UNAVAILABLE": "Dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau ít phút.",
+    "INTERNAL_ERROR": "Đã xảy ra lỗi từ phía chúng tôi. Vui lòng thử lại."
   }
 }

@@ -209,6 +209,31 @@ error_codes:
     http_status: 400
     description: Request failed field validation. Details in the error payload.
 
+  # Platform-level codes. Unprefixed, like VALIDATION_FAILED, because they
+  # belong to no domain — any handler in any service can return either.
+  #
+  # Neither maps to an audit event, and that is deliberate: an audit record
+  # answers "who did what to whom", and there is no actor here. A load
+  # balancer probing readiness is not performing an auditable action, and an
+  # unhandled panic has no subject. Both belong in the operational log, which
+  # is where the detail deliberately kept out of the response goes.
+
+  SERVICE_UNAVAILABLE:
+    http_status: 503
+    description: >
+      A dependency this request required is unreachable (GATE-001). Names no
+      dependency, host or driver error: the caller can do nothing with that
+      detail, and the endpoint returning this most often — the readiness probe
+      — is unauthenticated. The underlying error goes to the log instead.
+
+  INTERNAL_ERROR:
+    http_status: 500
+    description: >
+      An unhandled failure — the code the gateway's recovery middleware
+      returns when a handler panics (GATE-001). Carries no detail for the same
+      reason a stack trace never reaches a client; it is in the log, keyed by
+      the request ID the response carries.
+
 # -----------------------------------------------------------------------------
 # AUDIT EVENTS — the INTERNAL record: who did what to whom, and how it ended.
 #
