@@ -390,6 +390,8 @@ const (
 	ErrAuthAccountSuspended ErrorCode = "AUTH_ACCOUNT_SUSPENDED"
 	ErrAuthRateLimited ErrorCode = "AUTH_RATE_LIMITED"
 	ErrValidationFailed ErrorCode = "VALIDATION_FAILED"
+	ErrServiceUnavailable ErrorCode = "SERVICE_UNAVAILABLE"
+	ErrInternalError ErrorCode = "INTERNAL_ERROR"
 )
 
 // ErrorCodeSpec carries what the API layer needs to build an error envelope.
@@ -410,6 +412,8 @@ var ErrorCodes = map[ErrorCode]ErrorCodeSpec{
 	ErrAuthAccountSuspended: {HTTPStatus: 403},
 	ErrAuthRateLimited: {HTTPStatus: 429},
 	ErrValidationFailed: {HTTPStatus: 400},
+	ErrServiceUnavailable: {HTTPStatus: 503},
+	ErrInternalError: {HTTPStatus: 500},
 }
 
 // AllErrorCodes lets a catalog completeness test iterate every code.
@@ -422,6 +426,8 @@ var AllErrorCodes = []ErrorCode{
 	ErrAuthAccountSuspended,
 	ErrAuthRateLimited,
 	ErrValidationFailed,
+	ErrServiceUnavailable,
+	ErrInternalError,
 }
 
 // --- Audit events --------------------------------------------------------

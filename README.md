@@ -47,8 +47,16 @@ Qwen-backed RAG chatbot that proposes and adapts routines from your own data.
 git clone <this-repo>
 cd grindstats
 cp .env.example .env
-docker compose up
+docker compose up -d          # Postgres on :5433, Redis on :6379
+
+cd services/monolith
+go run ./cmd/server           # http://localhost:8080/healthz
+go test ./...                 # unit tests only
+GRINDSTATS_TEST_DB=1 go test ./...   # + Postgres/Redis connectivity tests
 ```
+
+Postgres is published on **5433**, not 5432, so it can't be shadowed by a
+Postgres installed directly on the host machine.
 
 See `CLAUDE.md` for repo conventions and structure, and `docs/adr/` for
 architecture decisions as they're made.

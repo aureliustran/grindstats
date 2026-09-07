@@ -191,7 +191,9 @@ export type ErrorCode =
   | "AUTH_CSRF_FAILED"
   | "AUTH_ACCOUNT_SUSPENDED"
   | "AUTH_RATE_LIMITED"
-  | "VALIDATION_FAILED";
+  | "VALIDATION_FAILED"
+  | "SERVICE_UNAVAILABLE"
+  | "INTERNAL_ERROR";
 
 // No message text or i18n keys are generated here on purpose.
 //
@@ -214,4 +216,6 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   AUTH_ACCOUNT_SUSPENDED: 403,
   AUTH_RATE_LIMITED: 429,
   VALIDATION_FAILED: 400,
+  SERVICE_UNAVAILABLE: 503,
+  INTERNAL_ERROR: 500,
 };

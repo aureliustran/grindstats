@@ -32,6 +32,8 @@ export const ERROR_MESSAGE_KEYS: Record<ErrorCode, string> = {
   AUTH_ACCOUNT_SUSPENDED: "common.auth.error_suspended",
   AUTH_RATE_LIMITED: "landing.auth.error_rate_limited",
   VALIDATION_FAILED: "common.error_validation",
+  SERVICE_UNAVAILABLE: "common.error_service_unavailable",
+  INTERNAL_ERROR: "common.error_internal",
 };
 
 export interface ApiError {
