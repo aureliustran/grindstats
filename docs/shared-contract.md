@@ -161,6 +161,7 @@ reachable from here in one hop.
 | [`i18n-guidelines.md`](i18n-guidelines.md) | en-US / vi-VN rules, formatting, voice-critical strings |
 | [`srs-authentication.md`](srs-authentication.md) | SRS-AUTH-001: auth, sessions, roles, security requirements |
 | [`audit-and-errors.md`](audit-and-errors.md) | Enumerations, audit events, and the error codes derived from them — model file, rules, generator |
+| [`deployment-aws.md`](deployment-aws.md) | How the project is deployed and released — the cheap Phase 1–2 shape, not the blueprint's target |
 | [`stories/index.md`](stories/index.md) | Every user story, by code, with acceptance criteria and test cases |
 | [`stories/auth-epic-overview.md`](stories/auth-epic-overview.md) | How the five auth stories relate and depend on each other |
 | [`blueprint-url.txt`](blueprint-url.txt) | Link to the published architecture blueprint (the overall source of truth) |
