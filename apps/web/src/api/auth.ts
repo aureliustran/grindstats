@@ -1,13 +1,10 @@
 /* =============================================================================
-   Auth API client — mock implementation for LAND-001 run 1.
+   Auth API client — real HTTP implementation (default) and mock for tests/offline.
+   =============================================================================
 
    VITE_AUTH_MOCK:
-     unset / "true"  → in-memory mock (this file)
-     anything else   → stub that throws "not implemented"
-                       (real HTTP client arrives in a later run)
-
-   Only this file knows the server doesn't exist yet. Every import elsewhere
-   uses `authApi` and handles `ApiRequestError` — nothing branches on mock/real.
+     "true"         → in-memory mock
+     unset / other  → real HTTP client (apiFetch)
    ============================================================================= */
 
 import {
@@ -17,11 +14,17 @@ import {
   type AuthApi,
   type LoginRequest,
   type LoginResponse,
+  type OAuthLinkConfirmRequest,
+  type PasswordResetConfirmRequest,
+  type PasswordResetRequestRequest,
   type RegisterRequest,
   type RegisterResponse,
   type RequestOptions,
   type SessionInfo,
+  type StatusResponse,
+  type VerifyEmailRequest,
 } from "./auth.types";
+import { apiFetch, setCsrfToken } from "./http";
 import {
   clearSession,
   createSession,
@@ -33,18 +36,120 @@ import {
 import { performMockOAuthApprove } from "./mock/googleOAuth";
 
 // --------------------------------------------------------------------------
-// Re-export the Google OAuth helper so the consent page doesn't import
-// storage internals directly.
+// Re-export the Google OAuth helper
 // --------------------------------------------------------------------------
 export { performMockOAuthApprove as mockOAuth };
 
 // --------------------------------------------------------------------------
-// Internal helpers
+// Real HTTP implementation
 // --------------------------------------------------------------------------
 
-/** Returns true when offline simulation is active. */
+export const realImpl: AuthApi = {
+  async register(req: RegisterRequest, opts?: RequestOptions): Promise<RegisterResponse> {
+    return await apiFetch<RegisterResponse>("/api/v1/auth/register", {
+      method: "POST",
+      body: JSON.stringify(req),
+      signal: opts?.signal,
+    });
+  },
+
+  async login(req: LoginRequest, opts?: RequestOptions): Promise<LoginResponse> {
+    const res = await apiFetch<LoginResponse>("/api/v1/auth/login", {
+      method: "POST",
+      body: JSON.stringify(req),
+      signal: opts?.signal,
+    });
+    if (res?.csrf_token) {
+      setCsrfToken(res.csrf_token);
+    }
+    return res;
+  },
+
+  async logout(csrfToken: string, opts?: RequestOptions): Promise<void> {
+    try {
+      await apiFetch<void>("/api/v1/auth/logout", {
+        method: "POST",
+        headers: { "X-CSRF-Token": csrfToken },
+        signal: opts?.signal,
+      });
+    } finally {
+      setCsrfToken(null);
+    }
+  },
+
+  async me(opts?: RequestOptions): Promise<SessionInfo | null> {
+    try {
+      const res = await apiFetch<SessionInfo>("/api/v1/users/me", {
+        method: "GET",
+        signal: opts?.signal,
+      });
+      if (res?.csrf_token) {
+        setCsrfToken(res.csrf_token);
+      }
+      return res;
+    } catch (err) {
+      if (err instanceof ApiRequestError && err.failure.kind === "http" && err.failure.status === 401) {
+        setCsrfToken(null);
+        return null;
+      }
+      throw err;
+    }
+  },
+
+  googleAuthorizeUrl(): string {
+    return "/api/v1/auth/oauth/google";
+  },
+
+  async verifyEmail(req: VerifyEmailRequest, opts?: RequestOptions): Promise<StatusResponse> {
+    return await apiFetch<StatusResponse>("/api/v1/auth/verify-email", {
+      method: "POST",
+      body: JSON.stringify(req),
+      signal: opts?.signal,
+    });
+  },
+
+  async requestPasswordReset(
+    req: PasswordResetRequestRequest,
+    opts?: RequestOptions,
+  ): Promise<StatusResponse> {
+    return await apiFetch<StatusResponse>("/api/v1/auth/password-reset/request", {
+      method: "POST",
+      body: JSON.stringify(req),
+      signal: opts?.signal,
+    });
+  },
+
+  async confirmPasswordReset(
+    req: PasswordResetConfirmRequest,
+    opts?: RequestOptions,
+  ): Promise<StatusResponse> {
+    return await apiFetch<StatusResponse>("/api/v1/auth/password-reset/confirm", {
+      method: "POST",
+      body: JSON.stringify(req),
+      signal: opts?.signal,
+    });
+  },
+
+  async confirmOAuthLink(
+    req: OAuthLinkConfirmRequest,
+    opts?: RequestOptions,
+  ): Promise<StatusResponse> {
+    return await apiFetch<StatusResponse>("/api/v1/auth/oauth/link/confirm", {
+      method: "POST",
+      body: JSON.stringify(req),
+      signal: opts?.signal,
+    });
+  },
+};
+
+// --------------------------------------------------------------------------
+// Mock helpers & implementation
+// --------------------------------------------------------------------------
+
 function isOffline(): boolean {
-  if (sessionStorage.getItem("gs.mock.offline") === "1") return true;
+  if (typeof sessionStorage !== "undefined" && sessionStorage.getItem("gs.mock.offline") === "1") {
+    return true;
+  }
   try {
     return new URLSearchParams(window.location.search).get("mock") === "offline";
   } catch {
@@ -52,9 +157,8 @@ function isOffline(): boolean {
   }
 }
 
-/** Simulate network latency (400–700 ms). */
 function delay(signal?: AbortSignal): Promise<void> {
-  const ms = 400 + Math.floor(Math.random() * 301);
+  const ms = 100 + Math.floor(Math.random() * 200);
   return new Promise((resolve, reject) => {
     const timer = setTimeout(resolve, ms);
     signal?.addEventListener("abort", () => {
@@ -68,11 +172,11 @@ function throwNetwork(): never {
   throw new ApiRequestError({ kind: "network" });
 }
 
-function throwHttp(status: number, code: string, message?: string): never {
+function throwHttp(status: number, code: string, message?: string, details?: any): never {
   throw new ApiRequestError({
     kind: "http",
     status,
-    error: { code, message: message ?? code },
+    error: { code, message: message ?? code, details },
   });
 }
 
@@ -85,16 +189,12 @@ function throwRateLimited(retryAfterSeconds: number): never {
   });
 }
 
-// --------------------------------------------------------------------------
-// Per-email failure tracking (in-memory, intentionally not persisted)
-// --------------------------------------------------------------------------
-
 const RATE_LIMIT_THRESHOLD = 5;
 const RATE_LIMIT_WINDOW_MS = 30_000;
 
 interface FailureRecord {
   count: number;
-  lockedUntil: number | null; // epoch ms
+  lockedUntil: number | null;
 }
 
 const failureMap = new Map<string, FailureRecord>();
@@ -114,7 +214,6 @@ function checkRateLimit(email: string): void {
     if (remaining > 0) {
       throwRateLimited(Math.ceil(remaining / 1000));
     }
-    // Lock expired — reset
     rec.count = 0;
     rec.lockedUntil = null;
   }
@@ -132,23 +231,16 @@ function resetFailures(email: string): void {
   failureMap.delete(email.toLowerCase());
 }
 
-// --------------------------------------------------------------------------
-// Mock implementation
-// --------------------------------------------------------------------------
-
-const mockImpl: AuthApi = {
+export const mockImpl: AuthApi = {
   async register(req: RegisterRequest, opts?: RequestOptions): Promise<RegisterResponse> {
     await delay(opts?.signal);
     if (isOffline()) throwNetwork();
 
-    // Client-side validation check (belt-and-suspenders; landing page validates too)
     if (!EMAIL_PATTERN.test(req.email) || req.password.length < PASSWORD_MIN_LENGTH) {
       throwHttp(400, "VALIDATION_FAILED");
     }
 
-    // Create user only if new; always return the same 202 body (FR-08)
     upsertUser(req.email, req.password);
-
     return { status: "pending_verification" };
   },
 
@@ -157,14 +249,11 @@ const mockImpl: AuthApi = {
     if (isOffline()) throwNetwork();
 
     const email = req.email.toLowerCase();
-
-    // Check rate-limit before doing anything else
     checkRateLimit(email);
 
     const user = findUserByEmail(email);
     if (!user || user.password !== req.password) {
       recordFailure(email);
-      // Re-check — may have just crossed the threshold
       const rec = getRecord(email);
       if (rec.lockedUntil !== null) {
         throwRateLimited(RATE_LIMIT_WINDOW_MS / 1000);
@@ -174,6 +263,7 @@ const mockImpl: AuthApi = {
 
     resetFailures(email);
     const session = createSession(user.id);
+    setCsrfToken(session.csrfToken);
     return { csrf_token: session.csrfToken };
   },
 
@@ -181,13 +271,13 @@ const mockImpl: AuthApi = {
     await delay(opts?.signal);
     if (isOffline()) throwNetwork();
 
-    // Validate the token matches the active session
     const session = getSession();
     if (!session || session.csrfToken !== csrfToken) {
       throwHttp(401, "AUTH_INVALID_TOKEN");
     }
 
     clearSession();
+    setCsrfToken(null);
   },
 
   async me(opts?: RequestOptions): Promise<SessionInfo | null> {
@@ -198,36 +288,79 @@ const mockImpl: AuthApi = {
     if (!session) return null;
 
     const user = sessionToCurrentUser(session);
-    if (!user) return null; // session references a deleted userId
+    if (!user) return null;
+    setCsrfToken(session.csrfToken);
     return { user, csrf_token: session.csrfToken };
   },
 
   googleAuthorizeUrl(): string {
     return "/__mock/oauth/google";
   },
+
+  async verifyEmail(req: VerifyEmailRequest, opts?: RequestOptions): Promise<StatusResponse> {
+    await delay(opts?.signal);
+    if (isOffline()) throwNetwork();
+
+    if (!req.token || req.token === "invalid") {
+      throwHttp(400, "AUTH_LINK_INVALID");
+    }
+    return { status: "verified" };
+  },
+
+  async requestPasswordReset(
+    req: PasswordResetRequestRequest,
+    opts?: RequestOptions,
+  ): Promise<StatusResponse> {
+    await delay(opts?.signal);
+    if (isOffline()) throwNetwork();
+
+    if (!EMAIL_PATTERN.test(req.email)) {
+      throwHttp(400, "VALIDATION_FAILED");
+    }
+    return { status: "sent" };
+  },
+
+  async confirmPasswordReset(
+    req: PasswordResetConfirmRequest,
+    opts?: RequestOptions,
+  ): Promise<StatusResponse> {
+    await delay(opts?.signal);
+    if (isOffline()) throwNetwork();
+
+    if (!req.token || req.token === "invalid") {
+      throwHttp(400, "AUTH_LINK_INVALID");
+    }
+    if (req.password.length < PASSWORD_MIN_LENGTH) {
+      throwHttp(400, "VALIDATION_FAILED", undefined, [
+        { field: "password", rule: "min_length" },
+      ]);
+    }
+    if (req.password === "breachedPassword123!") {
+      throwHttp(400, "VALIDATION_FAILED", undefined, [
+        { field: "password", rule: "breached" },
+      ]);
+    }
+    return { status: "reset" };
+  },
+
+  async confirmOAuthLink(
+    req: OAuthLinkConfirmRequest,
+    opts?: RequestOptions,
+  ): Promise<StatusResponse> {
+    await delay(opts?.signal);
+    if (isOffline()) throwNetwork();
+
+    if (!req.token || req.token === "invalid") {
+      throwHttp(400, "AUTH_LINK_INVALID");
+    }
+    return { status: "linked" };
+  },
 };
 
 // --------------------------------------------------------------------------
-// Stub for when mock is explicitly disabled
+// Public export: default to realImpl unless VITE_AUTH_MOCK === "true"
 // --------------------------------------------------------------------------
 
-const notImplemented = (): never => {
-  throw new Error("auth not implemented: set VITE_AUTH_MOCK=true or leave it unset");
-};
+const useMock = import.meta.env?.VITE_AUTH_MOCK === "true";
 
-const stubImpl: AuthApi = {
-  register: notImplemented,
-  login: notImplemented,
-  logout: notImplemented,
-  me: notImplemented,
-  googleAuthorizeUrl: notImplemented,
-};
-
-// --------------------------------------------------------------------------
-// Public export
-// --------------------------------------------------------------------------
-
-const useMock =
-  !import.meta.env.VITE_AUTH_MOCK || import.meta.env.VITE_AUTH_MOCK === "true";
-
-export const authApi: AuthApi = useMock ? mockImpl : stubImpl;
+export const authApi: AuthApi = useMock ? mockImpl : realImpl;
