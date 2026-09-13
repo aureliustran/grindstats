@@ -524,8 +524,9 @@ other, and `fe-auth-flows`'s done-criteria is where parity must hold.
 ## 9. Conformance checks for every slice
 
 - `go build ./... && go vet ./...`, `go test ./...`
-- `python3 scripts/gen_audit_model.py --check` reports no drift (Python may be absent on the
-  owner's machine; then the generator's output being committed unchanged is the check)
+- `py scripts/gen_audit_model.py --check` reports no drift — the interpreter on this machine is
+  `py` (3.13.3); `python3` and `python` are Microsoft Store stubs
+  ([AMD-001](amendments/AMD-001-frontend-test-tooling.md))
 - `npm run build` and `npx tsc --noEmit` in `apps/web`, `npx vitest run`
 - The i18n parity check in `LAND-001/contract.md` §5 passes
 - No slice's diff touches a path outside its allowlist

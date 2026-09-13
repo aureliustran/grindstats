@@ -18,9 +18,11 @@ Two pieces of work, at opposite ends of the run.
 
 ### Pre-step — before wave 1 is dispatched
 
-Add every module dependency the run needs and commit a building `go.mod` / `go.sum`. `go.mod`,
-`go.sum`, `package.json` and `package-lock.json` are assigned to you precisely because every
-slice that added a library would collide on them. The set is decided (`plan.md` §3):
+**Every other slice waits on this**, backend and frontend alike, because every brief's
+done-criteria includes a test command. Two halves.
+
+**(a) Go modules.** `go.mod` and `go.sum` are assigned to you precisely because every slice that
+added a library would collide on them. The set is decided (`plan.md` §3):
 
 | Need | Module |
 |---|---|
@@ -30,11 +32,40 @@ slice that added a library would collide on them. The set is decided (`plan.md` 
 | Redis test double | `github.com/alicebob/miniredis/v2` |
 | OAuth2 + PKCE | `golang.org/x/oauth2` |
 
-Frontend: nothing new — Vitest and Testing Library are already configured.
+**(b) The frontend test runner, which does not exist yet.** Added by
+[AMD-001](../amendments/AMD-001-frontend-test-tooling.md): `docs/frontend.md` §7 describes Vitest
+and Testing Library in the present tense, but `apps/web` has no test runner, no `test` block in
+`vite.config.ts`, and not one test file. Two frontend slices have `npx vitest run` in their
+done-criteria and cannot install it themselves — the manifest is yours.
 
-Add them, run `go mod tidy`, confirm `go build ./... && go test ./...` is green, and report the
-pre-step separately so the instructor can dispatch wave 1. **Do nothing else at this point** —
-no `main.go` changes, no config. Everything below waits for wave 3.
+Install and **configure**:
+
+- `vitest`, `jsdom`, `@testing-library/react`, `@testing-library/user-event`,
+  `@testing-library/jest-dom` (devDependencies)
+- a `test` block in `vite.config.ts`: `environment: "jsdom"`, `globals: true`, a setup file at
+  `apps/web/src/test/setup.ts` importing `@testing-library/jest-dom`, and
+  **`passWithNoTests: true`** — a green run with zero test files must not read as a failure while
+  wave 1 is still writing the first one
+- a `"test": "vitest run"` script in `package.json`
+- `"types": ["vitest/globals"]` in `tsconfig.app.json` so `tsc --noEmit` accepts the globals
+
+**(c) `python3` → `py`.** On this machine `python3` and `python` are Microsoft Store
+execution-alias stubs; the real interpreter is `py` (Python 3.13.3). Fix `package.json`'s
+`check-i18n` script accordingly. Every brief's done-criteria now says `py`, and the generator
+check is mandatory rather than excusable — it runs here.
+
+Then: `go mod tidy`, confirm `go build ./... && go test ./...` is green, confirm
+`npx vitest run` and `npx tsc --noEmit` both execute, and **report the pre-step separately** so
+the instructor can dispatch wave 1.
+
+**Prove the frontend tooling actually works** — installing packages is not evidence that
+`screen.getByText` resolves in this repo's TypeScript and jsdom setup. Write a throwaway test
+that renders a trivial component and asserts on its text, run it, paste the real output into your
+report, then delete it. A tooling pre-step that "should work" is how five slices discover at once
+that it doesn't.
+
+**Do nothing else at this point** — no `main.go`, no config, no route wiring. Everything below
+waits for wave 3.
 
 ### Wave 4 — the composition root and the end-to-end proof
 
@@ -67,6 +98,11 @@ Assemble what nine slices built into one running binary, and prove the whole pat
 - `scripts/dev/**`
 - `go.mod`, `go.sum`
 - `apps/web/package.json`, `apps/web/package-lock.json`
+- `apps/web/vite.config.ts` *(pre-step only — AMD-001)*
+- `apps/web/tsconfig.json`, `apps/web/tsconfig.app.json`, `apps/web/tsconfig.node.json`
+  *(pre-step only — AMD-001)*
+- `apps/web/src/test/**` — the Vitest setup file only. Tests live beside the code they test
+  (`frontend.md` §7); this is not a tests directory. *(pre-step only — AMD-001)*
 - `.gitignore`
 
 ## Read-only context
@@ -127,15 +163,20 @@ full run is one flag away (`backend.md` §7).
 
 ## Done when
 
-- [ ] **Pre-step reported separately**, with `go build ./... && go test ./...` green, before
-      wave 1 is dispatched
+- [ ] **Pre-step reported separately, before wave 1 is dispatched**, with:
+      - `go build ./... && go test ./...` green
+      - `cd apps/web && npx vitest run` executing (green, `passWithNoTests`) and
+        `npx tsc --noEmit` clean
+      - the throwaway render-and-assert test's **actual output pasted in the report**, and the
+        file deleted afterwards
+      - `npm run check-i18n` running under `py`
 - [ ] The binary starts against compose and serves every endpoint in contract §1 at its path
 - [ ] Route groups produce the four facts listed above; each is asserted
 - [ ] TC-16 and the end-to-end test pass:
       `GRINDSTATS_TEST_DB=... go test -tags=integration ./services/monolith/internal/auth/integration/...`
 - [ ] `go build ./... && go vet ./... && go test ./...` green without a database
 - [ ] `cd apps/web && npx tsc --noEmit && npx vitest run && npm run build` green
-- [ ] `python3 scripts/gen_audit_model.py --check` clean, or its absence explained
+- [ ] `py scripts/gen_audit_model.py --check` clean (the interpreter here is `py`, not `python3`)
 - [ ] i18n parity passes (the Node one-liner in
       `docs/stories/LAND-001-public-landing-page/contract.md` §5)
 - [ ] No secret, key or credential is committed; `.env.example` carries names only; the generated

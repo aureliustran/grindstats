@@ -5,7 +5,9 @@
 [AUTH-003](../../AUTH-003-auth-session-refresh-logout/story.md) ·
 [LAND-001 contract](../../LAND-001-public-landing-page/contract.md) (the shape you are replacing)
 **Domain:** frontend
-**Depends on:** none — may start immediately
+**Depends on:** `be-wiring`'s **pre-step** only (it installs and configures the Vitest +
+Testing Library tooling your done-criteria depend on — see
+[AMD-001](../amendments/AMD-001-frontend-test-tooling.md)). No other slice.
 **Load skill:** `multi-agent-execution` (`.claude/skills/multi-agent-execution/SKILL.md`)
 **Read first:** [`docs/frontend.md`](../../../frontend.md) §6, §7 ·
 [`docs/shared-contract.md`](../../../shared-contract.md) §3 ·

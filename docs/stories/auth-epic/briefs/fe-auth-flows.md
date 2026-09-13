@@ -5,7 +5,11 @@
 scenarios need) · [AUTH-002](../../AUTH-002-auth-login/story.md) ·
 [AUTH-003](../../AUTH-003-auth-session-refresh-logout/story.md) (session lifecycle in the shell)
 **Domain:** frontend
-**Depends on:** `plat-audit-model`, `fe-auth-client` — both must have reported done
+**Depends on:** `be-wiring`'s pre-step (test tooling —
+[AMD-001](../amendments/AMD-001-frontend-test-tooling.md)), then `plat-audit-model` and
+`fe-auth-client`, both of which must have reported done. You are wave 2; that wait is by design,
+not an oversight — `plat-audit-model` generates the two error codes you render, and
+`fe-auth-client` provides the four `AuthApi` methods you call.
 **Load skill:** `multi-agent-execution` (`.claude/skills/multi-agent-execution/SKILL.md`)
 **Read first:** [`docs/frontend.md`](../../../frontend.md) (all of it) ·
 [`docs/design-system.md`](../../../design-system.md) (§7 is your definition of done) ·
@@ -137,8 +141,8 @@ Also required, as this slice's own conformance tests:
 - [ ] Every conformance test in the list above passes
 - [ ] Both catalogs contain every new key, including `errors.auth_email_unverified` and
       `errors.auth_link_invalid`, and parity passes — the check is in
-      `docs/stories/LAND-001-public-landing-page/contract.md` §5 (Node one-liner; Python may not
-      be installed here)
+      `py scripts/check_i18n_parity.py`, or equivalently the Node one-liner in
+      `docs/stories/LAND-001-public-landing-page/contract.md` §5
 - [ ] No raw hex/px/ms in any component you wrote; no hardcoded user-facing string; no
       `renderServerMessage()` call
 - [ ] `docs/design-system.md` §7 and `docs/i18n-guidelines.md` §7 walked, with anything you could

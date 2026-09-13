@@ -147,10 +147,11 @@ compiling if it is wrong — which is exactly why it is wave 1 and alone in owni
       is a bug that invalidates stored rows)
 - [ ] Both server locales carry entries for both new codes
 - [ ] `errorMessages.ts` maps both new codes
-- [ ] Generator is clean: `python3 scripts/gen_audit_model.py --check`
-      *(if Python is unavailable on this machine, say so in your report and state instead that
-      the generator was run where it is available, or that you hand-verified the output against
-      `audit-and-errors.md` §6's format rules — do not silently skip this)*
+- [ ] Generator is clean: **`py scripts/gen_audit_model.py --check`**
+      *(the interpreter on this machine is `py`, Python 3.13.3 — `python3` and `python` are
+      Microsoft Store stubs that will fail confusingly. This check is runnable, so it is
+      required; there is no acceptable reason to skip it. See
+      [AMD-001](../amendments/AMD-001-frontend-test-tooling.md).)*
 - [ ] Go builds: `go build ./... && go vet ./...`
 - [ ] Go tests pass: `go test ./...`
 - [ ] `cd apps/web && npx tsc --noEmit` — expect it to **fail only** on missing SPA catalog

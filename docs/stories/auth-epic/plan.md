@@ -193,7 +193,16 @@ docker-compose.yml                                          → be-wiring
 scripts/dev/**                                              → be-wiring
 go.mod / go.sum                                             → be-wiring (see below)
 apps/web/package.json / package-lock.json                   → be-wiring (see below)
+apps/web/vite.config.ts                                     → be-wiring (pre-step; AMD-001)
+apps/web/tsconfig.json / tsconfig.app.json / tsconfig.node.json → be-wiring (pre-step; AMD-001)
+apps/web/src/test/**                                        → be-wiring (pre-step; AMD-001)
 ```
+
+The last three lines were added by [AMD-001](amendments/AMD-001-frontend-test-tooling.md). They
+were previously owned by **nobody**, which was the real hole: a file every frontend slice needs
+changed and no slice may write is a file that blocks the wave. `apps/web/src/test/` holds the
+Vitest setup file only — it is not a place slices put tests, which live beside the code they
+test (`frontend.md` §7).
 
 **Dependency files are a shared-file hazard.** `go.mod`, `go.sum`, `package.json` and
 `package-lock.json` are touched by any slice that adds a library, and every such slice will
@@ -208,11 +217,21 @@ so no slice needs to add one:
 | Redis test double | `github.com/alicebob/miniredis/v2` | ” |
 | OAuth2 + PKCE | `golang.org/x/oauth2` | ” |
 | Migrations runner | none — `cmd/migrate` runs plain SQL through pgx | — |
-| Frontend | nothing new; Vitest + RTL are already configured | — |
+| Frontend test runner | `vitest`, `jsdom`, `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom` — **none of which exist yet** (see AMD-001) | ” |
 
-`be-wiring` therefore does one thing **before** wave 1 (add the modules, commit a building
-`go.mod`/`go.sum`) and the rest of its slice in wave 4. That pre-step is the only work that
-happens outside its wave, and it is listed in its brief.
+> **Corrected by [AMD-001](amendments/AMD-001-frontend-test-tooling.md), 2026-09-07.** This table
+> originally said the frontend needed nothing because "Vitest + RTL are already configured". They
+> are not: `docs/frontend.md` §7 describes the testing convention in the present tense, and the
+> instructor read a statement of intent as a statement of fact. There is no test runner, no
+> `test` block in `vite.config.ts`, and no test file anywhere in `apps/web`. The pre-step below
+> now installs and configures all of it.
+
+`be-wiring` therefore does one thing **before** wave 1 — add the Go modules, install and
+configure the frontend test tooling, and commit a building `go.mod`/`go.sum` and a working
+`npx vitest run` — and the rest of its slice in wave 4. That pre-step is the only work that
+happens outside its wave, and it is listed in its brief. **No slice, frontend or backend, is
+dispatched until the pre-step reports done**, because every brief's done-criteria includes a test
+command.
 
 **Explicitly not owned by anyone this run — do not modify:**
 `apps/web/src/features/landing/**`, `apps/web/src/styles/**`,
@@ -295,7 +314,8 @@ place both sides are live at once in run 1.
 ## 5. Sequencing and dispatch
 
 ```
-pre  : be-wiring adds the module dependencies and commits a building go.mod/go.sum
+pre  : be-wiring adds the Go modules, installs + configures the frontend test runner,
+       and proves both: `go test ./...` and `npx vitest run` each execute (AMD-001)
 wave1: plat-audit-model │ db-migrations │ libs-authmw │ libs-auditlog │ fe-auth-client   (5 parallel)
          ↓ gate 2
 wave2: be-auth-store │ fe-auth-flows                                                     (2 parallel)
@@ -328,6 +348,9 @@ nothing else.
 - [x] Shared foundations (model, schema, token lib, audit writer, API client) are wave 1 and
       complete before their consumers start
 - [x] Dependency manifests are pre-resolved so no slice needs to edit `go.mod` or `package.json`
+- [x] Every command in a brief's done-criteria has been **verified to run on this machine** — the
+      interpreter is `py`, not `python3` ([AMD-001](amendments/AMD-001-frontend-test-tooling.md));
+      a done-criterion nobody can execute is a done-criterion that gets skipped with a reason
 
 ## 7. Carried-forward open questions
 
