@@ -376,13 +376,18 @@ def gen_go(model, assigned):
     L.append("")
     L.append("// AuditEventSpec describes one event's fixed attributes and its declared fields.")
     L.append("// RequiredFields is what an emitter must supply; emitting without them is a bug")
-    L.append("// that leaves an unqueryable record in an append-only store.")
+    L.append("// that leaves an unqueryable record in an append-only store. OptionalFields lists")
+    L.append("// every field declared `optional: true` in model.yaml. Together, RequiredFields")
+    L.append("// plus OptionalFields is the complete declared set for the event — a writer needs")
+    L.append("// both to reject a field the event never declared, not just to check presence of")
+    L.append("// the required ones (added by AMD-001-auth-epic amendment AMD-002, libs-auditlog).")
     L.append("type AuditEventSpec struct {")
     L.append("\tActor          ActorType")
     L.append("\tOutcome        Outcome")
     L.append("\tSeverity       Severity")
     L.append("\tMessage        string")
     L.append("\tRequiredFields []string")
+    L.append("\tOptionalFields []string")
     L.append("\tErrorCode      ErrorCode // empty when the event surfaces nothing to the caller")
     L.append("}")
     L.append("")
@@ -390,7 +395,9 @@ def gen_go(model, assigned):
     for name, spec in model["events"].items():
         fields = spec.get("fields", {}) or {}
         required = [f for f, fs in fields.items() if not fs.get("optional")]
+        optional = [f for f, fs in fields.items() if fs.get("optional")]
         req = ", ".join(f'"{f}"' for f in required)
+        opt = ", ".join(f'"{f}"' for f in optional)
         ec = spec.get("error_code")
         ec_go = f"Err{go_ident(ec.lower())}" if ec else '""'
         msg = spec["message"].replace('"', '\\"')
@@ -400,6 +407,7 @@ def gen_go(model, assigned):
         L.append(f"\t\tSeverity:       Severity{go_ident(spec['severity'])},")
         L.append(f'\t\tMessage:        "{msg}",')
         L.append(f"\t\tRequiredFields: []string{{{req}}},")
+        L.append(f"\t\tOptionalFields: []string{{{opt}}},")
         L.append(f"\t\tErrorCode:      {ec_go},")
         L.append("\t},")
     L.append("}")

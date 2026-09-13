@@ -844,13 +844,18 @@ const (
 
 // AuditEventSpec describes one event's fixed attributes and its declared fields.
 // RequiredFields is what an emitter must supply; emitting without them is a bug
-// that leaves an unqueryable record in an append-only store.
+// that leaves an unqueryable record in an append-only store. OptionalFields lists
+// every field declared `optional: true` in model.yaml. Together, RequiredFields
+// plus OptionalFields is the complete declared set for the event — a writer needs
+// both to reject a field the event never declared, not just to check presence of
+// the required ones (added by AMD-001-auth-epic amendment AMD-002, libs-auditlog).
 type AuditEventSpec struct {
 	Actor          ActorType
 	Outcome        Outcome
 	Severity       Severity
 	Message        string
 	RequiredFields []string
+	OptionalFields []string
 	ErrorCode      ErrorCode // empty when the event surfaces nothing to the caller
 }
 
@@ -861,6 +866,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityInfo,
 		Message:        "Account created for {user_id}",
 		RequiredFields: []string{"user_id"},
+		OptionalFields: []string{"via"},
 		ErrorCode:      "",
 	},
 	EvtAuthLoginSucceeded: {
@@ -869,6 +875,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityInfo,
 		Message:        "Login succeeded for {user_id} from {device_label}",
 		RequiredFields: []string{"user_id", "session_jti", "source_ip"},
+		OptionalFields: []string{"device_label"},
 		ErrorCode:      "",
 	},
 	EvtAuthLoginFailed: {
@@ -877,6 +884,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityWarn,
 		Message:        "Login failed ({reason}) from {source_ip}",
 		RequiredFields: []string{"reason", "source_ip"},
+		OptionalFields: []string{"user_id"},
 		ErrorCode:      ErrAuthInvalidCredentials,
 	},
 	EvtAuthLoginBackoffTriggered: {
@@ -885,6 +893,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityWarn,
 		Message:        "Backoff started for {user_id}: {delay_seconds}s",
 		RequiredFields: []string{"user_id", "delay_seconds", "source_ip"},
+		OptionalFields: []string{},
 		ErrorCode:      ErrAuthRateLimited,
 	},
 	EvtAuthTokenRejected: {
@@ -893,6 +902,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityInfo,
 		Message:        "Token rejected ({reason}) jti={jti}",
 		RequiredFields: []string{"reason", "jti", "request_id"},
+		OptionalFields: []string{"user_id"},
 		ErrorCode:      ErrAuthInvalidToken,
 	},
 	EvtAuthRefreshRotated: {
@@ -901,6 +911,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityInfo,
 		Message:        "Refresh rotated for {user_id}",
 		RequiredFields: []string{"user_id", "old_jti", "new_jti"},
+		OptionalFields: []string{},
 		ErrorCode:      "",
 	},
 	EvtAuthRefreshReplayDetected: {
@@ -909,6 +920,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityCritical,
 		Message:        "Refresh replay detected for {user_id}; all sessions revoked",
 		RequiredFields: []string{"user_id", "replayed_jti", "source_ip"},
+		OptionalFields: []string{},
 		ErrorCode:      ErrAuthInvalidToken,
 	},
 	EvtAuthLogout: {
@@ -917,6 +929,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityInfo,
 		Message:        "Logout for {user_id}",
 		RequiredFields: []string{"user_id", "session_jti"},
+		OptionalFields: []string{},
 		ErrorCode:      "",
 	},
 	EvtAuthLogoutAll: {
@@ -925,6 +938,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityInfo,
 		Message:        "All sessions revoked for {user_id}",
 		RequiredFields: []string{"user_id"},
+		OptionalFields: []string{"trigger"},
 		ErrorCode:      "",
 	},
 	EvtAuthSessionRevoked: {
@@ -933,6 +947,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityInfo,
 		Message:        "Session {revoked_jti} revoked by {user_id}",
 		RequiredFields: []string{"user_id", "revoked_jti"},
+		OptionalFields: []string{},
 		ErrorCode:      "",
 	},
 	EvtAuthPasswordResetCompleted: {
@@ -941,6 +956,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityWarn,
 		Message:        "Password reset completed for {user_id}",
 		RequiredFields: []string{"user_id", "source_ip"},
+		OptionalFields: []string{},
 		ErrorCode:      "",
 	},
 	EvtAdminActionPerformed: {
@@ -949,6 +965,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityWarn,
 		Message:        "Admin {admin_id} performed {action} on {target_user_id}",
 		RequiredFields: []string{"action", "admin_id", "target_user_id", "request_id"},
+		OptionalFields: []string{"new_role"},
 		ErrorCode:      "",
 	},
 	EvtAdminActionDenied: {
@@ -957,6 +974,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityWarn,
 		Message:        "Forbidden admin access attempt by {user_id} on {path}",
 		RequiredFields: []string{"user_id", "path", "request_id"},
+		OptionalFields: []string{},
 		ErrorCode:      ErrAuthForbidden,
 	},
 	EvtAuthLoginSuspended: {
@@ -965,6 +983,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityWarn,
 		Message:        "Login denied for suspended account {user_id} from {source_ip}",
 		RequiredFields: []string{"user_id", "source_ip"},
+		OptionalFields: []string{},
 		ErrorCode:      ErrAuthAccountSuspended,
 	},
 	EvtAuthEmailVerified: {
@@ -973,6 +992,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityInfo,
 		Message:        "Email verified for {user_id}",
 		RequiredFields: []string{"user_id"},
+		OptionalFields: []string{},
 		ErrorCode:      "",
 	},
 	EvtAuthLinkRejected: {
@@ -981,6 +1001,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityWarn,
 		Message:        "Link rejected ({kind}:{reason}) from {source_ip}",
 		RequiredFields: []string{"kind", "reason", "source_ip"},
+		OptionalFields: []string{"user_id"},
 		ErrorCode:      ErrAuthLinkInvalid,
 	},
 	EvtAuthPasswordResetRequested: {
@@ -989,6 +1010,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityInfo,
 		Message:        "Password reset requested from {source_ip}",
 		RequiredFields: []string{"source_ip"},
+		OptionalFields: []string{"user_id"},
 		ErrorCode:      "",
 	},
 	EvtAuthOauthLinkRequired: {
@@ -997,6 +1019,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityWarn,
 		Message:        "OAuth link required for {user_id} ({provider}) from {source_ip}",
 		RequiredFields: []string{"user_id", "provider", "source_ip"},
+		OptionalFields: []string{},
 		ErrorCode:      "",
 	},
 	EvtAuthWriteBlockedUnverified: {
@@ -1005,6 +1028,7 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		Severity:       SeverityInfo,
 		Message:        "Write blocked (unverified email) for {user_id} on {path}",
 		RequiredFields: []string{"user_id", "path", "request_id"},
+		OptionalFields: []string{},
 		ErrorCode:      ErrAuthEmailUnverified,
 	},
 }
