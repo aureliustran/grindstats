@@ -6,6 +6,8 @@
     "AUTH_FORBIDDEN": "Bạn không có quyền truy cập tài nguyên này.",
     "AUTH_CSRF_FAILED": "Không xác minh được yêu cầu. Vui lòng tải lại trang và thử lại.",
     "AUTH_ACCOUNT_SUSPENDED": "Tài khoản này đã bị tạm khóa.",
+    "AUTH_EMAIL_UNVERIFIED": "Địa chỉ email của bạn chưa được xác minh. Vui lòng xác minh email để tiếp tục.",
+    "AUTH_LINK_INVALID": "Liên kết này không hợp lệ, đã hết hạn hoặc đã được sử dụng.",
     "AUTH_RATE_LIMITED": "Bạn đã thử quá nhiều lần. Vui lòng đợi một lát rồi thử lại.",
     "VALIDATION_FAILED": "Yêu cầu chứa các trường không hợp lệ.",
     "SERVICE_UNAVAILABLE": "Dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau ít phút.",

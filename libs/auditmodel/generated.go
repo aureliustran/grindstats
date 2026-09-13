@@ -448,6 +448,119 @@ var CompactToLinkedProvider = map[string]LinkedProvider{
 	"LINK2003": LinkedProviderQwen,
 }
 
+// AccountStatus: Whether an account may authenticate (FR-42). Run 1 reads it; run 2 writes it.
+type AccountStatus string
+
+const (
+	AccountStatusActive AccountStatus = "active"
+	AccountStatusSuspended AccountStatus = "suspended"
+)
+
+// AllAccountStatuss lists every valid value, for validation and iteration.
+var AllAccountStatuss = []AccountStatus{
+	AccountStatusActive,
+	AccountStatusSuspended,
+}
+
+func (v AccountStatus) Valid() bool {
+	for _, c := range AllAccountStatuss {
+		if v == c {
+			return true
+		}
+	}
+	return false
+}
+
+// AccountStatusCompact is the permanent 8-char DB code for each value (docs/audit-and-errors.md §6). Never appears outside the storage layer.
+var AccountStatusCompact = map[AccountStatus]string{
+	AccountStatusActive: "ACCO2001",
+	AccountStatusSuspended: "ACCO2002",
+}
+
+// CompactToAccountStatus is the inverse of AccountStatusCompact, for translating a DB read.
+var CompactToAccountStatus = map[string]AccountStatus{
+	"ACCO2001": AccountStatusActive,
+	"ACCO2002": AccountStatusSuspended,
+}
+
+// LinkKind: What a single-use emailed link authorizes. One table, one lifecycle (SEC-04).
+type LinkKind string
+
+const (
+	LinkKindEmailVerification LinkKind = "email_verification"
+	LinkKindPasswordReset LinkKind = "password_reset"
+	LinkKindOauthLink LinkKind = "oauth_link"
+)
+
+// AllLinkKinds lists every valid value, for validation and iteration.
+var AllLinkKinds = []LinkKind{
+	LinkKindEmailVerification,
+	LinkKindPasswordReset,
+	LinkKindOauthLink,
+}
+
+func (v LinkKind) Valid() bool {
+	for _, c := range AllLinkKinds {
+		if v == c {
+			return true
+		}
+	}
+	return false
+}
+
+// LinkKindCompact is the permanent 8-char DB code for each value (docs/audit-and-errors.md §6). Never appears outside the storage layer.
+var LinkKindCompact = map[LinkKind]string{
+	LinkKindEmailVerification: "LINK2004",
+	LinkKindPasswordReset: "LINK2005",
+	LinkKindOauthLink: "LINK2006",
+}
+
+// CompactToLinkKind is the inverse of LinkKindCompact, for translating a DB read.
+var CompactToLinkKind = map[string]LinkKind{
+	"LINK2004": LinkKindEmailVerification,
+	"LINK2005": LinkKindPasswordReset,
+	"LINK2006": LinkKindOauthLink,
+}
+
+// LinkRejectReason: Why a link token was refused. INTERNAL — all three map to one error code, because telling a caller which one applies tells them whether the token was ever real.
+type LinkRejectReason string
+
+const (
+	LinkRejectReasonUnknown LinkRejectReason = "unknown"
+	LinkRejectReasonExpired LinkRejectReason = "expired"
+	LinkRejectReasonAlreadyConsumed LinkRejectReason = "already_consumed"
+)
+
+// AllLinkRejectReasons lists every valid value, for validation and iteration.
+var AllLinkRejectReasons = []LinkRejectReason{
+	LinkRejectReasonUnknown,
+	LinkRejectReasonExpired,
+	LinkRejectReasonAlreadyConsumed,
+}
+
+func (v LinkRejectReason) Valid() bool {
+	for _, c := range AllLinkRejectReasons {
+		if v == c {
+			return true
+		}
+	}
+	return false
+}
+
+// LinkRejectReasonCompact is the permanent 8-char DB code for each value (docs/audit-and-errors.md §6). Never appears outside the storage layer.
+var LinkRejectReasonCompact = map[LinkRejectReason]string{
+	LinkRejectReasonUnknown: "LINK2007",
+	LinkRejectReasonExpired: "LINK2008",
+	LinkRejectReasonAlreadyConsumed: "LINK2009",
+}
+
+// CompactToLinkRejectReason is the inverse of LinkRejectReasonCompact, for translating a DB read.
+var CompactToLinkRejectReason = map[string]LinkRejectReason{
+	"LINK2007": LinkRejectReasonUnknown,
+	"LINK2008": LinkRejectReasonExpired,
+	"LINK2009": LinkRejectReasonAlreadyConsumed,
+}
+
 // LoginFailureReason: Why a login attempt failed. INTERNAL — this granularity exists for forensics and must never reach the client. See auth.login.failed.
 type LoginFailureReason string
 
@@ -604,6 +717,8 @@ const (
 	ErrAuthForbidden ErrorCode = "AUTH_FORBIDDEN"
 	ErrAuthCsrfFailed ErrorCode = "AUTH_CSRF_FAILED"
 	ErrAuthAccountSuspended ErrorCode = "AUTH_ACCOUNT_SUSPENDED"
+	ErrAuthEmailUnverified ErrorCode = "AUTH_EMAIL_UNVERIFIED"
+	ErrAuthLinkInvalid ErrorCode = "AUTH_LINK_INVALID"
 	ErrAuthRateLimited ErrorCode = "AUTH_RATE_LIMITED"
 	ErrValidationFailed ErrorCode = "VALIDATION_FAILED"
 	ErrServiceUnavailable ErrorCode = "SERVICE_UNAVAILABLE"
@@ -626,6 +741,8 @@ var ErrorCodes = map[ErrorCode]ErrorCodeSpec{
 	ErrAuthForbidden: {HTTPStatus: 403},
 	ErrAuthCsrfFailed: {HTTPStatus: 403},
 	ErrAuthAccountSuspended: {HTTPStatus: 403},
+	ErrAuthEmailUnverified: {HTTPStatus: 403},
+	ErrAuthLinkInvalid: {HTTPStatus: 400},
 	ErrAuthRateLimited: {HTTPStatus: 429},
 	ErrValidationFailed: {HTTPStatus: 400},
 	ErrServiceUnavailable: {HTTPStatus: 503},
@@ -640,6 +757,8 @@ var AllErrorCodes = []ErrorCode{
 	ErrAuthForbidden,
 	ErrAuthCsrfFailed,
 	ErrAuthAccountSuspended,
+	ErrAuthEmailUnverified,
+	ErrAuthLinkInvalid,
 	ErrAuthRateLimited,
 	ErrValidationFailed,
 	ErrServiceUnavailable,
@@ -654,6 +773,8 @@ var ErrorCodeCompact = map[ErrorCode]string{
 	ErrAuthForbidden: "AUTH0004",
 	ErrAuthCsrfFailed: "AUTH0005",
 	ErrAuthAccountSuspended: "AUTH0006",
+	ErrAuthEmailUnverified: "AUTH0008",
+	ErrAuthLinkInvalid: "AUTH0009",
 	ErrAuthRateLimited: "AUTH0007",
 	ErrValidationFailed: "VALI0001",
 	ErrServiceUnavailable: "SERV0001",
@@ -668,6 +789,8 @@ var CompactToErrorCode = map[string]ErrorCode{
 	"AUTH0004": ErrAuthForbidden,
 	"AUTH0005": ErrAuthCsrfFailed,
 	"AUTH0006": ErrAuthAccountSuspended,
+	"AUTH0008": ErrAuthEmailUnverified,
+	"AUTH0009": ErrAuthLinkInvalid,
 	"AUTH0007": ErrAuthRateLimited,
 	"VALI0001": ErrValidationFailed,
 	"SERV0001": ErrServiceUnavailable,
@@ -705,6 +828,18 @@ const (
 	EvtAdminActionPerformed AuditEvent = "admin.action.performed"
 	// A non-admin token attempted an admin endpoint (FR-22, logged per §6 AC-5).
 	EvtAdminActionDenied AuditEvent = "admin.action.denied"
+	// A login attempt succeeded against a suspended account. Separated from auth.login.failed so this outcome can carry AUTH_ACCOUNT_SUSPENDED while wrong-password/unknown-email still carries AUTH_INVALID_CREDENTIALS (D2).
+	EvtAuthLoginSuspended AuditEvent = "auth.login.suspended"
+	// An account confirmed control of its email address via a verification link (FR-03).
+	EvtAuthEmailVerified AuditEvent = "auth.email.verified"
+	// A single-use emailed link token was refused. One event for all three LinkRejectReason values, mapping to one error code — the distinction between "never existed" and "already used" must not reach the caller (SEC-04).
+	EvtAuthLinkRejected AuditEvent = "auth.link.rejected"
+	// A password-reset email was requested (FR-07). Emitted whether or not the address is known — the response is byte-identical either way to prevent account enumeration; user_id is absent when the address is unknown.
+	EvtAuthPasswordResetRequested AuditEvent = "auth.password_reset.requested"
+	// An OAuth callback found the email already owned by a local account with no linked identity; a link token was emailed and the browser redirected (FR-06, §4.3).
+	EvtAuthOauthLinkRequired AuditEvent = "auth.oauth.link_required"
+	// An authenticated but unverified account attempted an unsafe-method request; gateway middleware blocked it (FR-03, D4).
+	EvtAuthWriteBlockedUnverified AuditEvent = "auth.write_blocked_unverified"
 )
 
 // AuditEventSpec describes one event's fixed attributes and its declared fields.
@@ -824,6 +959,54 @@ var AuditEvents = map[AuditEvent]AuditEventSpec{
 		RequiredFields: []string{"user_id", "path", "request_id"},
 		ErrorCode:      ErrAuthForbidden,
 	},
+	EvtAuthLoginSuspended: {
+		Actor:          ActorTypeAnonymous,
+		Outcome:        OutcomeDenied,
+		Severity:       SeverityWarn,
+		Message:        "Login denied for suspended account {user_id} from {source_ip}",
+		RequiredFields: []string{"user_id", "source_ip"},
+		ErrorCode:      ErrAuthAccountSuspended,
+	},
+	EvtAuthEmailVerified: {
+		Actor:          ActorTypeUser,
+		Outcome:        OutcomeSuccess,
+		Severity:       SeverityInfo,
+		Message:        "Email verified for {user_id}",
+		RequiredFields: []string{"user_id"},
+		ErrorCode:      "",
+	},
+	EvtAuthLinkRejected: {
+		Actor:          ActorTypeAnonymous,
+		Outcome:        OutcomeFailure,
+		Severity:       SeverityWarn,
+		Message:        "Link rejected ({kind}:{reason}) from {source_ip}",
+		RequiredFields: []string{"kind", "reason", "source_ip"},
+		ErrorCode:      ErrAuthLinkInvalid,
+	},
+	EvtAuthPasswordResetRequested: {
+		Actor:          ActorTypeAnonymous,
+		Outcome:        OutcomeSuccess,
+		Severity:       SeverityInfo,
+		Message:        "Password reset requested from {source_ip}",
+		RequiredFields: []string{"source_ip"},
+		ErrorCode:      "",
+	},
+	EvtAuthOauthLinkRequired: {
+		Actor:          ActorTypeAnonymous,
+		Outcome:        OutcomeDenied,
+		Severity:       SeverityWarn,
+		Message:        "OAuth link required for {user_id} ({provider}) from {source_ip}",
+		RequiredFields: []string{"user_id", "provider", "source_ip"},
+		ErrorCode:      "",
+	},
+	EvtAuthWriteBlockedUnverified: {
+		Actor:          ActorTypeUser,
+		Outcome:        OutcomeDenied,
+		Severity:       SeverityInfo,
+		Message:        "Write blocked (unverified email) for {user_id} on {path}",
+		RequiredFields: []string{"user_id", "path", "request_id"},
+		ErrorCode:      ErrAuthEmailUnverified,
+	},
 }
 
 // AuditEventCompact is the permanent 8-char DB code for each audit event (docs/audit-and-errors.md §6). Never appears in a rendered audit message.
@@ -841,6 +1024,12 @@ var AuditEventCompact = map[AuditEvent]string{
 	EvtAuthPasswordResetCompleted: "AUTH1011",
 	EvtAdminActionPerformed: "ADMI1001",
 	EvtAdminActionDenied: "ADMI1002",
+	EvtAuthLoginSuspended: "AUTH1012",
+	EvtAuthEmailVerified: "AUTH1013",
+	EvtAuthLinkRejected: "AUTH1014",
+	EvtAuthPasswordResetRequested: "AUTH1015",
+	EvtAuthOauthLinkRequired: "AUTH1016",
+	EvtAuthWriteBlockedUnverified: "AUTH1017",
 }
 
 // CompactToAuditEvent is the inverse of AuditEventCompact, for translating a DB read.
@@ -858,4 +1047,10 @@ var CompactToAuditEvent = map[string]AuditEvent{
 	"AUTH1011": EvtAuthPasswordResetCompleted,
 	"ADMI1001": EvtAdminActionPerformed,
 	"ADMI1002": EvtAdminActionDenied,
+	"AUTH1012": EvtAuthLoginSuspended,
+	"AUTH1013": EvtAuthEmailVerified,
+	"AUTH1014": EvtAuthLinkRejected,
+	"AUTH1015": EvtAuthPasswordResetRequested,
+	"AUTH1016": EvtAuthOauthLinkRequired,
+	"AUTH1017": EvtAuthWriteBlockedUnverified,
 }

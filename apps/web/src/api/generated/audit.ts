@@ -215,6 +215,57 @@ export const LINKED_PROVIDER_COMPACT: Record<LinkedProvider, string> = {
   "qwen": "LINK2003",
 };
 
+/** Whether an account may authenticate (FR-42). Run 1 reads it; run 2 writes it. */
+export type AccountStatus =
+  | "active"
+  | "suspended";
+export const ALL_ACCOUNT_STATUS: readonly AccountStatus[] = [
+  "active",
+  "suspended",
+] as const;
+
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const ACCOUNT_STATUS_COMPACT: Record<AccountStatus, string> = {
+  "active": "ACCO2001",
+  "suspended": "ACCO2002",
+};
+
+/** What a single-use emailed link authorizes. One table, one lifecycle (SEC-04). */
+export type LinkKind =
+  | "email_verification"
+  | "password_reset"
+  | "oauth_link";
+export const ALL_LINK_KIND: readonly LinkKind[] = [
+  "email_verification",
+  "password_reset",
+  "oauth_link",
+] as const;
+
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const LINK_KIND_COMPACT: Record<LinkKind, string> = {
+  "email_verification": "LINK2004",
+  "password_reset": "LINK2005",
+  "oauth_link": "LINK2006",
+};
+
+/** Why a link token was refused. INTERNAL — all three map to one error code, because telling a caller which one applies tells them whether the token was ever real. */
+export type LinkRejectReason =
+  | "unknown"
+  | "expired"
+  | "already_consumed";
+export const ALL_LINK_REJECT_REASON: readonly LinkRejectReason[] = [
+  "unknown",
+  "expired",
+  "already_consumed",
+] as const;
+
+/** Permanent 8-char DB code per value (docs/audit-and-errors.md §6). Storage detail only — never compare application logic against these. */
+export const LINK_REJECT_REASON_COMPACT: Record<LinkRejectReason, string> = {
+  "unknown": "LINK2007",
+  "expired": "LINK2008",
+  "already_consumed": "LINK2009",
+};
+
 /** Why a login attempt failed. INTERNAL — this granularity exists for forensics and must never reach the client. See auth.login.failed. */
 export type LoginFailureReason =
   | "unknown_email"
@@ -298,6 +349,8 @@ export type ErrorCode =
   | "AUTH_FORBIDDEN"
   | "AUTH_CSRF_FAILED"
   | "AUTH_ACCOUNT_SUSPENDED"
+  | "AUTH_EMAIL_UNVERIFIED"
+  | "AUTH_LINK_INVALID"
   | "AUTH_RATE_LIMITED"
   | "VALIDATION_FAILED"
   | "SERVICE_UNAVAILABLE"
@@ -311,6 +364,8 @@ export const ERROR_CODE_COMPACT: Record<ErrorCode, string> = {
   AUTH_FORBIDDEN: "AUTH0004",
   AUTH_CSRF_FAILED: "AUTH0005",
   AUTH_ACCOUNT_SUSPENDED: "AUTH0006",
+  AUTH_EMAIL_UNVERIFIED: "AUTH0008",
+  AUTH_LINK_INVALID: "AUTH0009",
   AUTH_RATE_LIMITED: "AUTH0007",
   VALIDATION_FAILED: "VALI0001",
   SERVICE_UNAVAILABLE: "SERV0001",
@@ -336,6 +391,8 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   AUTH_FORBIDDEN: 403,
   AUTH_CSRF_FAILED: 403,
   AUTH_ACCOUNT_SUSPENDED: 403,
+  AUTH_EMAIL_UNVERIFIED: 403,
+  AUTH_LINK_INVALID: 400,
   AUTH_RATE_LIMITED: 429,
   VALIDATION_FAILED: 400,
   SERVICE_UNAVAILABLE: 503,

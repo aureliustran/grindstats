@@ -30,6 +30,8 @@ export const ERROR_MESSAGE_KEYS: Record<ErrorCode, string> = {
   AUTH_FORBIDDEN: "common.auth.error_forbidden",
   AUTH_CSRF_FAILED: "common.auth.error_csrf",
   AUTH_ACCOUNT_SUSPENDED: "common.auth.error_suspended",
+  AUTH_EMAIL_UNVERIFIED: "errors.auth_email_unverified",
+  AUTH_LINK_INVALID: "errors.auth_link_invalid",
   AUTH_RATE_LIMITED: "landing.auth.error_rate_limited",
   VALIDATION_FAILED: "common.error_validation",
   SERVICE_UNAVAILABLE: "common.error_service_unavailable",

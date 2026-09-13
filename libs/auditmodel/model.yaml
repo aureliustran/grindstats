@@ -127,6 +127,30 @@ enums:
       apple: Apple identity. Planned, not yet implemented.
       qwen: User-supplied Qwen/DashScope API key (not an identity).
 
+  # --- Auth status and link enums -------------------------------------------
+
+  AccountStatus:
+    description: Whether an account may authenticate (FR-42). Run 1 reads it; run 2 writes it.
+    values:
+      active: Normal. May log in.
+      suspended: Suspended by a SystemAdmin. Epoch advanced; login refused.
+
+  LinkKind:
+    description: What a single-use emailed link authorizes. One table, one lifecycle (SEC-04).
+    values:
+      email_verification: Confirms control of the address (FR-03, 24h).
+      password_reset: Authorizes setting a new password (FR-07, 1h).
+      oauth_link: Authorizes linking an OAuth identity to an existing local account (FR-06, 1h).
+
+  LinkRejectReason:
+    description: >
+      Why a link token was refused. INTERNAL — all three map to one error code, because
+      telling a caller which one applies tells them whether the token was ever real.
+    values:
+      unknown: No such token.
+      expired: Past its expiry.
+      already_consumed: Single-use token presented a second time.
+
   # --- Auth failure reasons --------------------------------------------------
 
   LoginFailureReason:
@@ -136,7 +160,14 @@ enums:
     values:
       unknown_email: No account exists for the submitted address.
       bad_password: Account exists; password did not verify.
-      account_suspended: Credentials valid but the account is suspended.
+      account_suspended:
+        description: Credentials valid but the account is suspended.
+        note: >
+          Retired by contract decision D2 (auth-epic/contract.md §0). Login now emits
+          auth.login.suspended instead — the suspended outcome was separated so it can
+          carry AUTH_ACCOUNT_SUSPENDED rather than AUTH_INVALID_CREDENTIALS. This value
+          is retained because compact codes are permanent once assigned
+          (audit-and-errors.md §6) and must not be recycled.
       backoff_active: Rejected without checking credentials; backoff in effect.
       rate_limited: Rejected by the gateway rate limiter before reaching auth.
 
@@ -210,6 +241,20 @@ error_codes:
       OPEN TENSION: returning this at login reveals the account exists, which
       is in conflict with FR-08/FR-14 enumeration protection. See
       docs/audit-and-errors.md §6. Resolve before implementing Phase 2.
+
+  AUTH_EMAIL_UNVERIFIED:
+    http_status: 403
+    description: >
+      An account that has not verified its email attempted a state-changing request
+      (FR-03). Enforced once, in gateway middleware — see auth-epic/contract.md D4.
+
+  AUTH_LINK_INVALID:
+    http_status: 400
+    description: >
+      A verification, password-reset or OAuth-link token that is unknown, expired or
+      already consumed. Deliberately one code for all three LinkRejectReason values,
+      for the same reason AUTH_INVALID_TOKEN is one code for four reject reasons: a
+      distinguishable response tells an attacker whether a token ever existed.
 
   AUTH_RATE_LIMITED:
     http_status: 429
@@ -422,3 +467,84 @@ events:
       request_id: {type: id}
     message: "Forbidden admin access attempt by {user_id} on {path}"
     error_code: AUTH_FORBIDDEN
+
+  # --- Run 1 auth events (registration, login, session, email, links) --------
+
+  auth.login.suspended:
+    description: >
+      A login attempt succeeded against a suspended account. Separated from
+      auth.login.failed so this outcome can carry AUTH_ACCOUNT_SUSPENDED while
+      wrong-password/unknown-email still carries AUTH_INVALID_CREDENTIALS (D2).
+    actor: anonymous
+    outcome: denied
+    severity: warn
+    fields:
+      user_id: {type: id}
+      source_ip: {type: string}
+    message: "Login denied for suspended account {user_id} from {source_ip}"
+    error_code: AUTH_ACCOUNT_SUSPENDED
+
+  auth.email.verified:
+    description: An account confirmed control of its email address via a verification link (FR-03).
+    actor: user
+    outcome: success
+    severity: info
+    fields:
+      user_id: {type: id}
+    message: "Email verified for {user_id}"
+
+  auth.link.rejected:
+    description: >
+      A single-use emailed link token was refused. One event for all three
+      LinkRejectReason values, mapping to one error code — the distinction between
+      "never existed" and "already used" must not reach the caller (SEC-04).
+    actor: anonymous
+    outcome: failure
+    severity: warn
+    fields:
+      kind: {enum: LinkKind}
+      reason: {enum: LinkRejectReason}
+      user_id: {type: id, optional: true, note: absent when the token was unknown}
+      source_ip: {type: string}
+    message: "Link rejected ({kind}:{reason}) from {source_ip}"
+    error_code: AUTH_LINK_INVALID
+
+  auth.password_reset.requested:
+    description: >
+      A password-reset email was requested (FR-07). Emitted whether or not the
+      address is known — the response is byte-identical either way to prevent
+      account enumeration; user_id is absent when the address is unknown.
+    actor: anonymous
+    outcome: success
+    severity: info
+    fields:
+      user_id: {type: id, optional: true, note: absent when the address is unknown}
+      source_ip: {type: string}
+    message: "Password reset requested from {source_ip}"
+
+  auth.oauth.link_required:
+    description: >
+      An OAuth callback found the email already owned by a local account with no
+      linked identity; a link token was emailed and the browser redirected (FR-06, §4.3).
+    actor: anonymous
+    outcome: denied
+    severity: warn
+    fields:
+      user_id: {type: id}
+      provider: {enum: LinkedProvider}
+      source_ip: {type: string}
+    message: "OAuth link required for {user_id} ({provider}) from {source_ip}"
+
+  auth.write_blocked_unverified:
+    description: >
+      An authenticated but unverified account attempted an unsafe-method request;
+      gateway middleware blocked it (FR-03, D4).
+    actor: user
+    outcome: denied
+    severity: info
+    fields:
+      user_id: {type: id}
+      path: {type: string}
+      request_id: {type: id}
+    message: "Write blocked (unverified email) for {user_id} on {path}"
+    error_code: AUTH_EMAIL_UNVERIFIED

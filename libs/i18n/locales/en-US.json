@@ -6,6 +6,8 @@
     "AUTH_FORBIDDEN": "You don't have access to this resource.",
     "AUTH_CSRF_FAILED": "This request couldn't be verified. Reload and try again.",
     "AUTH_ACCOUNT_SUSPENDED": "This account is suspended.",
+    "AUTH_EMAIL_UNVERIFIED": "Your email address is not verified. Please verify your email to continue.",
+    "AUTH_LINK_INVALID": "This link is invalid, expired, or has already been used.",
     "AUTH_RATE_LIMITED": "Too many attempts. Wait a moment and try again.",
     "VALIDATION_FAILED": "The request contains invalid fields.",
     "SERVICE_UNAVAILABLE": "The service is temporarily unavailable. Please try again shortly.",
