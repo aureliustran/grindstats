@@ -190,5 +190,50 @@
       "signup_next_step": "Kiểm tra email để xác nhận tài khoản của bạn.",
       "signup_check_inbox": "Chúng tôi đã gửi liên kết xác thực đến email của bạn. Nhấp vào liên kết để xác nhận tài khoản, sau đó đăng nhập."
     }
+  },
+  "errors": {
+    "auth_email_unverified": "Vui lòng xác thực địa chỉ email để thực hiện các thao tác ghi dữ liệu.",
+    "auth_link_invalid": "Liên kết này không hợp lệ, đã hết hạn hoặc đã được sử dụng."
+  },
+  "auth": {
+    "common": {
+      "back_to_login": "Đăng nhập",
+      "back_to_home": "Quay lại trang chủ"
+    },
+    "unverified": {
+      "banner": "Địa chỉ email của bạn chưa được xác thực. Xác thực để mở khóa ghi nhận dữ liệu và tạo bài tập.",
+      "dismiss": "Bỏ qua"
+    },
+    "verify_email": {
+      "title": "Xác thực email của bạn",
+      "success_message": "Địa chỉ email của bạn đã được xác thực thành công.",
+      "invalid_or_expired": "Liên kết này không hợp lệ, đã hết hạn hoặc đã được sử dụng.",
+      "action_login": "Đến trang đăng nhập"
+    },
+    "password_reset": {
+      "request_title": "Đặt lại mật khẩu",
+      "email_label": "Địa chỉ email",
+      "email_placeholder": "name@example.com",
+      "submit_request": "Gửi hướng dẫn đặt lại",
+      "request_sent_notice": "Nếu tài khoản tồn tại với email đó, hướng dẫn đặt lại mật khẩu đã được gửi.",
+      "rate_limited": "Quá nhiều yêu cầu. Vui lòng đợi {{seconds}} giây.",
+      "confirm_title": "Thiết lập mật khẩu mới",
+      "password_label": "Mật khẩu mới",
+      "password_placeholder": "Tối thiểu 10 ký tự",
+      "submit_confirm": "Thiết lập mật khẩu mới",
+      "success_message": "Mật khẩu đã được cập nhật. Vui lòng đăng nhập với mật khẩu mới.",
+      "invalid_token": "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.",
+      "error_min_length": "Mật khẩu phải có ít nhất 10 ký tự.",
+      "error_breached": "Mật khẩu này đã xuất hiện trong một vụ rò rỉ dữ liệu. Vui lòng chọn mật khẩu mạnh hơn.",
+      "generic_error": "Không thể đặt lại mật khẩu. Vui lòng yêu cầu liên kết mới."
+    },
+    "oauth_link": {
+      "title": "Xác nhận liên kết tài khoản",
+      "confirm_button": "Liên kết tài khoản Google",
+      "success_message": "Tài khoản Google của bạn đã được liên kết thành công.",
+      "invalid_token": "Liên kết này không hợp lệ, đã hết hạn hoặc đã được sử dụng.",
+      "link_required_notice": "Tài khoản với email này đã tồn tại. Chúng tôi đã gửi liên kết đến email của bạn để xác nhận liên kết Google.",
+      "oauth_failed_notice": "Xác thực với Google không thành công. Vui lòng thử lại."
+    }
   }
 }

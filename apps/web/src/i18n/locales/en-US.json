@@ -190,5 +190,50 @@
       "signup_next_step": "Check your email to confirm your account.",
       "signup_check_inbox": "We sent a verification link to your email. Click it to confirm your account, then log in."
     }
+  },
+  "errors": {
+    "auth_email_unverified": "Please verify your email address to perform write actions.",
+    "auth_link_invalid": "This link is invalid, expired, or has already been used."
+  },
+  "auth": {
+    "common": {
+      "back_to_login": "Log in",
+      "back_to_home": "Back to home"
+    },
+    "unverified": {
+      "banner": "Your email address is not verified. Verifying unlocks data logging and workout creation.",
+      "dismiss": "Dismiss"
+    },
+    "verify_email": {
+      "title": "Verify your email",
+      "success_message": "Your email address has been verified.",
+      "invalid_or_expired": "This link is invalid, expired, or has already been used.",
+      "action_login": "Go to login"
+    },
+    "password_reset": {
+      "request_title": "Reset your password",
+      "email_label": "Email address",
+      "email_placeholder": "name@example.com",
+      "submit_request": "Send reset instructions",
+      "request_sent_notice": "If an account exists for that email, password reset instructions have been sent.",
+      "rate_limited": "Too many requests. Please wait {{seconds}} seconds.",
+      "confirm_title": "Set a new password",
+      "password_label": "New password",
+      "password_placeholder": "At least 10 characters",
+      "submit_confirm": "Set new password",
+      "success_message": "Password has been updated. Please log in with your new password.",
+      "invalid_token": "This password reset link is invalid or has expired.",
+      "error_min_length": "Password must be at least 10 characters.",
+      "error_breached": "This password has appeared in a known data breach. Choose a stronger, unique password.",
+      "generic_error": "Unable to reset password. Please request a new link."
+    },
+    "oauth_link": {
+      "title": "Confirm account link",
+      "confirm_button": "Link Google account",
+      "success_message": "Your Google account has been successfully linked.",
+      "invalid_token": "This link is invalid, expired, or has already been used.",
+      "link_required_notice": "An account with this email already exists. We have sent a link to your email to authorize linking with Google.",
+      "oauth_failed_notice": "Google authentication could not be completed. Please try again."
+    }
   }
 }

@@ -30,6 +30,7 @@ export interface AuthState {
   status: AuthStatus;
   user?: CurrentUser;
   csrfToken?: string;
+  emailVerified: boolean;
 }
 
 export interface AuthContextValue extends AuthState {
@@ -53,7 +54,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 // --------------------------------------------------------------------------
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({ status: "loading" });
+  const [state, setState] = useState<AuthState>({ status: "loading", emailVerified: false });
 
   // Boot probe — runs once on mount
   useEffect(() => {
@@ -67,15 +68,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             status: "authenticated",
             user: session.user,
             csrfToken: session.csrf_token,
+            emailVerified: session.user.email_verified ?? true,
           });
         } else {
-          setState({ status: "anonymous" });
+          setState({ status: "anonymous", emailVerified: false });
         }
       })
       .catch(() => {
         if (cancelled) return;
         // Network failure on boot — treat as anonymous so the app is usable
-        setState({ status: "anonymous" });
+        setState({ status: "anonymous", emailVerified: false });
       });
     return () => {
       cancelled = true;
@@ -84,23 +86,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const markAuthenticated = useCallback(
     async (session: { csrfToken: string }) => {
-      setState({ status: "loading" });
+      setState((prev) => ({ ...prev, status: "loading" }));
       try {
         const probe = await authApi.me();
         if (probe) {
           setState({
             status: "authenticated",
             user: probe.user,
-            // Prefer the token from the login response; the probe re-issues the
-            // same session-bound token, so either is valid.
             csrfToken: session.csrfToken || probe.csrf_token,
+            emailVerified: probe.user.email_verified ?? true,
           });
         } else {
-          // Shouldn't happen right after a login, but handle gracefully
-          setState({ status: "anonymous" });
+          setState({ status: "anonymous", emailVerified: false });
         }
       } catch {
-        setState({ status: "anonymous" });
+        setState({ status: "anonymous", emailVerified: false });
       }
     },
     [],
@@ -108,16 +108,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     const csrfToken = state.csrfToken ?? "";
-    setState({ status: "loading" });
+    setState((prev) => ({ ...prev, status: "loading" }));
     try {
-      // Always attempt the server-side logout; me() re-issues the CSRF token
-      // on boot, so a reloaded tab still holds one. A 401/403 here means the
-      // session was already dead server-side — clearing locally is correct.
       await authApi.logout(csrfToken);
     } catch {
       // Best-effort: clear local state regardless
     }
-    setState({ status: "anonymous" });
+    setState({ status: "anonymous", emailVerified: false });
   }, [state.csrfToken]);
 
   return (

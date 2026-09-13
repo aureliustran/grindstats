@@ -129,7 +129,7 @@ Base path `/api/v1`. Every request carries `Accept-Language`; the server renders
 | 9 | `/auth/refresh` | POST | refresh cookie | — | **200** `{"data":{"csrf_token": string}}` + rotated cookies | 401 `AUTH_INVALID_TOKEN`; 401 `AUTH_SESSION_EXPIRED`; 503 `SERVICE_UNAVAILABLE` (Redis down — fail closed) | 30,31,34 |
 | 10 | `/auth/logout` | POST | access + CSRF | — | **204**, both cookies cleared | 401 `AUTH_INVALID_TOKEN`; 403 `AUTH_CSRF_FAILED`; 503 `SERVICE_UNAVAILABLE` | 32 |
 | 11 | `/auth/logout-all` | POST | access + CSRF | — | **204**, both cookies cleared | as above | 33 |
-| 12 | `/users/me` | GET | access | — | **200** `{"data":{"user":{id,email,role,tier}, "csrf_token": string}}` | 401 `AUTH_INVALID_TOKEN`; 401 `AUTH_SESSION_EXPIRED` | LAND-001 §0.2/§0.4, D6 |
+| 12 | `/users/me` | GET | access | — | **200** `{"data":{"user":{id,email,role,tier,email_verified}, "csrf_token": string}}` | 401 `AUTH_INVALID_TOKEN`; 401 `AUTH_SESSION_EXPIRED` | LAND-001 §0.2/§0.4, D6, AMD-003 |
 
 ### 1.1 Rules that bind both sides
 

@@ -66,10 +66,20 @@ it re-issues the session-bound CSRF token, which is session state.
 | `POST /auth/refresh` | refresh cookie | 200 `{"data":{"csrf_token"}}` + rotated cookies | 401 `AUTH_INVALID_TOKEN`; 401 `AUTH_SESSION_EXPIRED`; 503 `SERVICE_UNAVAILABLE` |
 | `POST /auth/logout` | access + CSRF | **204**, cookies cleared | 401, 403 `AUTH_CSRF_FAILED`, 503 |
 | `POST /auth/logout-all` | access + CSRF | **204**, cookies cleared | as above |
-| `GET /users/me` | access | 200 `{"data":{"user":{id,email,role,tier},"csrf_token"}}` | 401 `AUTH_INVALID_TOKEN` / `AUTH_SESSION_EXPIRED` |
+| `GET /users/me` | access | 200 `{"data":{"user":{id,email,role,tier,email_verified},"csrf_token"}}` | 401 `AUTH_INVALID_TOKEN` / `AUTH_SESSION_EXPIRED` |
 
 `tier` is the literal `"free"` with a `TODO` naming the subscription domain that will own it
 (contract D6). Do not invent a table for it.
+
+**`email_verified` added by [AMD-003](../amendments/AMD-003-users-me-needs-email-verified.md).**
+The SPA can't read an httpOnly cookie's JWT claims, so the client-side half of AUTH-001's
+unverified-banner scenario (already built by `fe-auth-flows`, which correctly anticipated this
+gap) has nothing to read without it. **Read it from `Account.IsVerified()`
+(`authdomain.Account`, via the `AccountRepo.ByID` call this handler already makes) — not from the
+access token claim already on the request.** The two must always agree, but the account row is
+the source of truth the claim is derived from; reading from the claim would go stale the instant
+an account is verified without the user obtaining a new token, which is exactly the window this
+field exists to cover correctly.
 
 ### Login order of operations — this is where D2 lives
 

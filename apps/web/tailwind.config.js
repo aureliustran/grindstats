@@ -42,6 +42,12 @@ export default {
         measure: "68ch",
         "6xl": "72rem",
       },
+      minHeight: {
+        target: "var(--target-min)",
+      },
+      minWidth: {
+        target: "var(--target-min)",
+      },
       zIndex: {
         base: "var(--z-base)",
         sticky: "var(--z-sticky)",
