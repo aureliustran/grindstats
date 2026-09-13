@@ -164,6 +164,8 @@ reachable from here in one hop.
 | [`deployment-aws.md`](deployment-aws.md) | How the project is deployed and released — the cheap Phase 1–2 shape, not the blueprint's target |
 | [`stories/index.md`](stories/index.md) | Every user story, by code, with acceptance criteria and test cases |
 | [`stories/auth-epic-overview.md`](stories/auth-epic-overview.md) | How the five auth stories relate and depend on each other |
+| [`stories/auth-epic/contract.md`](stories/auth-epic/contract.md) | **Frozen feature contract for auth run 1** — HTTP surface, token/cookie/CSRF model, Redis keys, SQL, the `authdomain` Go seams, middleware order, and the five decisions (D1–D7) that resolved the SRS's open questions |
+| [`stories/auth-epic/plan.md`](stories/auth-epic/plan.md) | Auth run 1's slice partition, ownership map, AC coverage map and dispatch order |
 | [`blueprint-url.txt`](blueprint-url.txt) | Link to the published architecture blueprint (the overall source of truth) |
 | `.claude/skills/multi-agent-code-execution/` | The four-phase pipeline for work spanning these boundaries (instruction → execution → testing → bug fixing), the gates between phases, and the run folder the story folder |
 | `.claude/skills/multi-agent-instruction/` | Phase 1: contract freeze, slice partitioning with disjoint ownership, executor briefs; owns the amendment protocol in §4 |

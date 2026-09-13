@@ -178,6 +178,27 @@ All under `/api/v1/auth`, error envelope `{ "error": { "code", "message" } }`.
 
 ---
 
+## 3.8 Decisions taken at implementation
+
+Recorded 2026-09-07, in phase 1 of the auth epic's first execution run. Each resolves a question
+this document deliberately left open. Full reasoning:
+[`stories/auth-epic/contract.md`](stories/auth-epic/contract.md) §0.
+
+| # | Question | Decision |
+|---|---|---|
+| D2 | FR-42's `AUTH_ACCOUNT_SUSPENDED` vs. FR-08/FR-14 enumeration protection | Login verifies the password **first**; the distinct 403 is returned only when the credentials are correct. Wrong password on a suspended account is indistinguishable from any other failure. `LoginFailureReason.account_suspended` is retained but no longer emitted; the outcome gets its own event, `auth.login.suspended`. Also recorded in [`audit-and-errors.md`](audit-and-errors.md) §7 |
+| D3 | FR-02's "warn or reject" on a breached password | **Reject**, `400 VALIDATION_FAILED` with `rule: "breached"`. If HIBP is unreachable or slow, the check is skipped and the request proceeds with a `warn` log — an HIBP outage must never block signup |
+| D4 | Where FR-03's "unverified accounts are read-only" is enforced | **Once, in gateway middleware**, driven by an `email_verified` claim, rejecting unsafe methods with a new code `AUTH_EMAIL_UNVERIFIED` (403). Per-service enforcement was rejected: a rule every future domain must remember is a rule that fails open |
+| D6 | `GET /users/me` (added by LAND-001, assigned there to "user-service") | Served by the **auth** package at the frozen public path `/api/v1/users/me`. Every field is auth-owned except `tier`, a stub until the subscription domain exists, and the response re-issues the session-bound CSRF token, which is session state |
+| D7 | Whether FR-24's CSRF requirement applies to `/auth/refresh` | **Exempt.** The SPA holds the CSRF token in memory only, so requiring it on refresh deadlocks the post-reload boot path. Refresh is protected by the refresh cookie's `SameSite=Lax` and `Path=/api/v1/auth` scope plus FR-31 replay detection. Every other state-changing request still requires it |
+
+Two SRS additions these imply, to fold in at the next revision: the error codes
+`AUTH_EMAIL_UNVERIFIED` and `AUTH_LINK_INVALID`, and the `email_verified` and `sid` claims in
+§2.2's token table (`sid` is the session id, stable across rotation; `jti` remains the per-token
+id and the unit of revocation).
+
+---
+
 ## 4. Non-functional requirements
 
 | ID | Requirement |
