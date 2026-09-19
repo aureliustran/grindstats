@@ -97,6 +97,9 @@ type statusResponse struct {
 	Status string `json:"status"`
 }
 
+// minPasswordLength is the FR-02/D3 minimum.
+const minPasswordLength = 10
+
 // ─── Interim VALIDATION_FAILED+details helper ────────────────────────────────
 //
 // libs/httpkit.Error cannot yet attach a "details" array to VALIDATION_FAILED.
@@ -155,19 +158,9 @@ func (h *Handler) register(c *gin.Context) {
 		return
 	}
 
-	// Password policy (FR-02, D3): minimum length 10, then HIBP.
-	if len(req.Password) < 10 {
-		writeValidationError(c, []ValidationDetail{{Field: "password", Rule: "min_length"}})
-		return
-	}
-
-	// HIBP check (D3): reject on hit, skip-and-warn on unreachable / timeout.
-	hibpCtx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
-	defer cancel()
-	if breached, err := h.hibp.IsBreached(hibpCtx, req.Password); err != nil {
-		slog.WarnContext(c.Request.Context(), "credentials: HIBP unreachable, skipping check", "error", err)
-	} else if breached {
-		writeValidationError(c, []ValidationDetail{{Field: "password", Rule: "breached"}})
+	// Password policy (FR-02, D3): minimum length, then HIBP.
+	if details := h.validatePassword(c.Request.Context(), req.Password); details != nil {
+		writeValidationError(c, details)
 		return
 	}
 
@@ -226,14 +219,8 @@ func (h *Handler) verifyEmail(c *gin.Context) {
 		return
 	}
 
-	lt, err := h.tokens.Consume(c.Request.Context(), auditmodel.LinkKindEmailVerification, req.Token)
-	if err != nil {
-		if errors.Is(err, authdomain.ErrLinkInvalid) {
-			h.writeLinkRejected(c, auditmodel.LinkKindEmailVerification, err)
-			httpkit.Error(c, auditmodel.ErrAuthLinkInvalid)
-			return
-		}
-		httpkit.InternalError(c)
+	lt, ok := h.consumeLink(c, auditmodel.LinkKindEmailVerification, req.Token)
+	if !ok {
 		return
 	}
 
@@ -254,8 +241,8 @@ func (h *Handler) verifyEmail(c *gin.Context) {
 // requestPasswordReset handles POST /auth/password-reset/request (contract §1 row 3).
 //
 // Enumeration protection (FR-08, §1.1): the response is byte-identical whether
-// the email exists or not. Timing is equalized via TimingDummyVerify so both
-// paths spend comparable wall-clock time.
+// the email exists or not. Timing is equalized via DummyVerify so both paths
+// spend comparable wall-clock time.
 func (h *Handler) requestPasswordReset(c *gin.Context) {
 	var req struct {
 		Email string `json:"email" binding:"required,email"`
@@ -274,7 +261,7 @@ func (h *Handler) requestPasswordReset(c *gin.Context) {
 
 	// Timing equalization: always run a dummy argon2id compare regardless of
 	// whether the address resolves to an account (FR-08, §1.1).
-	h.hasher.TimingDummyVerify(req.Email)
+	h.hasher.DummyVerify(req.Email)
 
 	if acc == nil {
 		// Unknown address: same 202, no mail, no token. Audit without user_id —
@@ -321,29 +308,14 @@ func (h *Handler) confirmPasswordReset(c *gin.Context) {
 
 	// Validate new password BEFORE consuming the token so an invalid password
 	// doesn't burn a valid token.
-	if len(req.Password) < 10 {
-		writeValidationError(c, []ValidationDetail{{Field: "password", Rule: "min_length"}})
+	if details := h.validatePassword(c.Request.Context(), req.Password); details != nil {
+		writeValidationError(c, details)
 		return
 	}
 
-	hibpCtx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
-	defer cancel()
-	if breached, err := h.hibp.IsBreached(hibpCtx, req.Password); err != nil {
-		slog.WarnContext(c.Request.Context(), "credentials: HIBP unreachable on reset, skipping", "error", err)
-	} else if breached {
-		writeValidationError(c, []ValidationDetail{{Field: "password", Rule: "breached"}})
-		return
-	}
-
-	lt, err := h.tokens.Consume(c.Request.Context(), auditmodel.LinkKindPasswordReset, req.Token)
-	if err != nil {
-		if errors.Is(err, authdomain.ErrLinkInvalid) {
-			// TC-13: rejected token → password unchanged, RevokeAll NOT called.
-			h.writeLinkRejected(c, auditmodel.LinkKindPasswordReset, err)
-			httpkit.Error(c, auditmodel.ErrAuthLinkInvalid)
-			return
-		}
-		httpkit.InternalError(c)
+	// TC-13: rejected token → password unchanged, RevokeAll NOT called.
+	lt, ok := h.consumeLink(c, auditmodel.LinkKindPasswordReset, req.Token)
+	if !ok {
 		return
 	}
 
@@ -385,14 +357,8 @@ func (h *Handler) confirmOAuthLink(c *gin.Context) {
 		return
 	}
 
-	lt, err := h.tokens.Consume(c.Request.Context(), auditmodel.LinkKindOauthLink, req.Token)
-	if err != nil {
-		if errors.Is(err, authdomain.ErrLinkInvalid) {
-			h.writeLinkRejected(c, auditmodel.LinkKindOauthLink, err)
-			httpkit.Error(c, auditmodel.ErrAuthLinkInvalid)
-			return
-		}
-		httpkit.InternalError(c)
+	lt, ok := h.consumeLink(c, auditmodel.LinkKindOauthLink, req.Token)
+	if !ok {
 		return
 	}
 
@@ -418,6 +384,43 @@ func (h *Handler) confirmOAuthLink(c *gin.Context) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+// validatePassword applies the FR-02/D3 policy: minimum length, then HIBP
+// (skip-and-warn when the HIBP service is unreachable). Returns nil when the
+// password is acceptable.
+func (h *Handler) validatePassword(ctx context.Context, pw string) []ValidationDetail {
+	if len(pw) < minPasswordLength {
+		return []ValidationDetail{{Field: "password", Rule: "min_length"}}
+	}
+	hibpCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	breached, err := h.hibp.IsBreached(hibpCtx, pw)
+	if err != nil {
+		slog.WarnContext(ctx, "credentials: HIBP unreachable, skipping check", "error", err)
+		return nil
+	}
+	if breached {
+		return []ValidationDetail{{Field: "password", Rule: "breached"}}
+	}
+	return nil
+}
+
+// consumeLink consumes a token of the given kind. On failure it writes the
+// rejection audit event and the HTTP error response itself; the caller
+// checks ok and returns immediately without writing anything further.
+func (h *Handler) consumeLink(c *gin.Context, kind auditmodel.LinkKind, raw string) (*authdomain.LinkToken, bool) {
+	lt, err := h.tokens.Consume(c.Request.Context(), kind, raw)
+	if err == nil {
+		return lt, true
+	}
+	if errors.Is(err, authdomain.ErrLinkInvalid) {
+		h.writeLinkRejected(c, kind, err)
+		httpkit.Error(c, auditmodel.ErrAuthLinkInvalid)
+	} else {
+		httpkit.InternalError(c)
+	}
+	return nil, false
+}
 
 // writeLinkRejected writes the auth.link.rejected audit event. Extracts the
 // rejection reason from a *authdomain.LinkInvalidError if available.

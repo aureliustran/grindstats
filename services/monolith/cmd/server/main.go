@@ -101,10 +101,18 @@ func main() {
 
 	// ── Auth domain handlers ──────────────────────────────────────────────────
 
+	// Password hasher (argon2id, OWASP defaults — SEC-01). Shared by session
+	// (login) and credentials (register, reset) — one hasher, one dummy hash.
+	hasher, err := credentials.NewPasswordHasher(credentials.DefaultArgon2Params)
+	if err != nil {
+		logger.Error("init password hasher", "error", err)
+		os.Exit(1)
+	}
+
 	// Session handler: implements the auth session lifecycle AND
 	// authdomain.SessionIssuer (used by credentials and oauth handlers below).
 	cookieOpts := authmw.CookieOptions{Secure: cfg.Auth.CookieSecure}
-	sessionHandler := session.New(keySet, redisClient, accountStore, auditWriter, cookieOpts, logger)
+	sessionHandler := session.New(keySet, redisClient, accountStore, auditWriter, cookieOpts, hasher, logger)
 
 	// HIBP password-breach check (D3). Fail-open on network errors.
 	hibpClient := hibp.New(cfg.Auth.HIBPEnabled, 2*time.Second)
@@ -117,13 +125,6 @@ func main() {
 		m = mailer.NewDev(logger, cfg.Auth.BaseURL)
 	} else {
 		m = &noopMailer{}
-	}
-
-	// Password hasher (argon2id, OWASP defaults — SEC-01).
-	hasher, err := credentials.NewPasswordHasher(credentials.DefaultArgon2Params)
-	if err != nil {
-		logger.Error("init password hasher", "error", err)
-		os.Exit(1)
 	}
 
 	// Credentials handler (register, verify-email, password-reset/*, oauth/link/confirm).

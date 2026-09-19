@@ -8,7 +8,8 @@
 // package (the interface lives in authdomain).
 //
 // All minting, verification, session storage, and backoff arithmetic come from
-// libs/authmw. Nothing here reimplements what that library already does.
+// libs/authmw; password hashing/verification comes from libs/password.
+// Nothing here reimplements what those libraries already do.
 package session
 
 import (
@@ -28,6 +29,7 @@ import (
 	"grindstats/libs/auditlog"
 	"grindstats/libs/auditmodel"
 	"grindstats/libs/authmw"
+	"grindstats/libs/password"
 	"grindstats/services/monolith/internal/auth/authdomain"
 )
 
@@ -39,6 +41,7 @@ type Handler struct {
 	accounts authdomain.AccountRepo
 	audit    auditlog.Writer
 	cookies  authmw.CookieOptions
+	hasher   *password.Hasher
 	clock    func() time.Time
 	logger   *slog.Logger
 }
@@ -50,6 +53,7 @@ func New(
 	accounts authdomain.AccountRepo,
 	audit auditlog.Writer,
 	cookies authmw.CookieOptions,
+	hasher *password.Hasher,
 	logger *slog.Logger,
 ) *Handler {
 	if logger == nil {
@@ -61,6 +65,7 @@ func New(
 		accounts: accounts,
 		audit:    audit,
 		cookies:  cookies,
+		hasher:   hasher,
 		clock:    time.Now,
 		logger:   logger,
 	}

@@ -147,16 +147,16 @@ func newE2EStack(t *testing.T) *e2eStack {
 	oauthIdentityStore := store.NewOAuthIdentityStore(pool)
 	linkTokenStore := store.NewLinkTokenStore(pool)
 
-	cookieOpts := authmw.CookieOptions{Secure: false} // plain http in tests
-	sessionHandler := session.New(ks, rdb, accountStore, auditWriter, cookieOpts, logger)
-
-	hibpClient := hibp.New(false, 2*time.Second)
-	cap := &capturingMailer{}
-
 	hasher, err := credentials.NewPasswordHasher(credentials.FastArgon2Params)
 	if err != nil {
 		t.Fatalf("e2e: init hasher: %v", err)
 	}
+
+	cookieOpts := authmw.CookieOptions{Secure: false} // plain http in tests
+	sessionHandler := session.New(ks, rdb, accountStore, auditWriter, cookieOpts, hasher, logger)
+
+	hibpClient := hibp.New(false, 2*time.Second)
+	cap := &capturingMailer{}
 
 	credHandler := credentials.New(
 		accountStore, oauthIdentityStore, linkTokenStore,

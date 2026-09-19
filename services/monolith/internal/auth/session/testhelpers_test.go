@@ -20,6 +20,7 @@ import (
 	"grindstats/libs/auditlog"
 	"grindstats/libs/auditmodel"
 	"grindstats/libs/authmw"
+	"grindstats/libs/password"
 	"grindstats/services/monolith/internal/auth/authdomain"
 	"grindstats/services/monolith/internal/auth/session"
 )
@@ -145,7 +146,11 @@ func newTestDeps(t *testing.T) *testDeps {
 	mr, rdb := newTestRedis(t)
 	repo := newFakeAccountRepo()
 	fake := auditlog.NewFake()
-	h := session.New(ks, rdb, repo, fake, authmw.DefaultCookieOptions(), nil)
+	hasher, err := password.New(password.Fast)
+	if err != nil {
+		t.Fatalf("password.New: %v", err)
+	}
+	h := session.New(ks, rdb, repo, fake, authmw.DefaultCookieOptions(), hasher, nil)
 	return &testDeps{ks: ks, mr: mr, rdb: rdb, repo: repo, audit: fake, handler: h}
 }
 

@@ -218,16 +218,16 @@ func newTestStack(t *testing.T) *testStack {
 	oauthRepo := &fakeOAuthIdentityRepo{}
 	linkRepo := newFakeLinkTokenRepo()
 
-	cookieOpts := authmw.CookieOptions{Secure: false} // plain http in tests
-	sessionHandler := session.New(ks, rdb, accountRepo, auditFake, cookieOpts, logger)
-
-	hibpClient := hibp.New(false, 2*time.Second) // disabled — no live HIBP in tests
-	m := mailer.NewDev(logger, "http://localhost:5173")
-
 	hasher, err := credentials.NewPasswordHasher(credentials.FastArgon2Params)
 	if err != nil {
 		t.Fatalf("newTestStack: init hasher: %v", err)
 	}
+
+	cookieOpts := authmw.CookieOptions{Secure: false} // plain http in tests
+	sessionHandler := session.New(ks, rdb, accountRepo, auditFake, cookieOpts, hasher, logger)
+
+	hibpClient := hibp.New(false, 2*time.Second) // disabled — no live HIBP in tests
+	m := mailer.NewDev(logger, "http://localhost:5173")
 
 	credHandler := credentials.New(
 		accountRepo, oauthRepo, linkRepo,

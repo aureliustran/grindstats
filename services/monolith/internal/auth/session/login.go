@@ -18,7 +18,7 @@ import (
 //
 //  1. Validate request body.
 //  2. Look up account. Check backoff for known accounts.
-//  3. Always argon2id-verify (against dummyHash for unknown email).
+//  3. Always argon2id-verify (a dummy comparison for unknown email).
 //  4. Wrong password or unknown email → 401 AUTH_INVALID_CREDENTIALS
 //     (byte-identical for both cases — contract §1.1, FR-08/FR-14).
 //  5. Correct password but suspended → 403 AUTH_ACCOUNT_SUSPENDED.
@@ -77,19 +77,22 @@ func (h *Handler) handleLogin(c *gin.Context) {
 	}
 
 	// ── 3. Argon2id verification — always, regardless of account existence ───
-	// An unknown email uses dummyHash so that the timing is indistinguishable
+	// An unknown email or an account with no local password (OAuth-only)
+	// runs the dummy comparison instead, so the timing is indistinguishable
 	// from a correct-format but wrong password (contract §1.1, FR-08/FR-14).
-	hashToVerify := dummyHash
+	var correct bool
 	if account != nil && account.PasswordHash != "" {
-		hashToVerify = account.PasswordHash
-	}
-
-	correct, verifyErr := verifyArgon2ID(req.Password, hashToVerify)
-	if verifyErr != nil {
-		// Malformed hash stored in the database; log it but treat as mismatch
-		// so the response is still indistinguishable from wrong password.
-		h.logger.ErrorContext(ctx, "session: argon2id verify malformed hash", "error", verifyErr)
-		correct = false
+		var verifyErr error
+		correct, verifyErr = h.hasher.Verify(req.Password, account.PasswordHash)
+		if verifyErr != nil {
+			// Malformed hash stored in the database; log it but treat as
+			// mismatch so the response is still indistinguishable from wrong
+			// password.
+			h.logger.ErrorContext(ctx, "session: argon2id verify malformed hash", "error", verifyErr)
+			correct = false
+		}
+	} else {
+		h.hasher.DummyVerify(req.Password)
 	}
 
 	// ── 4. Wrong password or unknown email → 401 AUTH_INVALID_CREDENTIALS ───
