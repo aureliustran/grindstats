@@ -29,9 +29,7 @@ func RequireRole(
 	log auditlog.Writer,
 	logger *slog.Logger,
 ) gin.HandlerFunc {
-	if logger == nil {
-		logger = slog.Default()
-	}
+	logger = logOr(logger)
 	return func(c *gin.Context) {
 		claims, ok := authmw.ClaimsFromContext(c.Request.Context())
 		if !ok {

@@ -4,11 +4,44 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
 
+	"grindstats/libs/auditmodel"
+	"grindstats/libs/httpkit"
 	"grindstats/services/monolith/internal/gateway/middleware"
 )
+
+// AUTH_RATE_LIMITED must map to 429 in the generated error code table, since
+// RateLimit relies on httpkit.Error to write that status for it.
+func TestRateLimit_CodeMapsTo429(t *testing.T) {
+	require.Equal(t, http.StatusTooManyRequests, httpkit.StatusFor(auditmodel.ErrAuthRateLimited))
+}
+
+// A slow, legitimate retrier (well under the limit, just spaced further apart
+// than the window) must never be locked out. Each request refreshing the
+// window's TTL would turn a 5/min limit into a permanent lockout for anyone
+// polling slower than once a minute.
+func TestRateLimit_SlowRetrierIsNotLockedOut(t *testing.T) {
+	mr, rdb := newTestRedis(t)
+	r := gin.New()
+	r.Use(middleware.RequestID())
+	r.Use(middleware.RateLimit(rdb, nil))
+	r.POST("/api/v1/auth/register", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	for i := 0; i < 6; i++ {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", nil)
+		req.RemoteAddr = "203.0.113.5:1234"
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("request %d: status = %d, want 200 (slow retrier must not be locked out)", i+1, rec.Code)
+		}
+		mr.FastForward(50 * time.Second)
+	}
+}
 
 func newRateLimitRouter(t *testing.T) *gin.Engine {
 	t.Helper()

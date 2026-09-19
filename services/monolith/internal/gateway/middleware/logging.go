@@ -7,6 +7,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// logOr returns logger, or slog.Default() when logger is nil. gateway.New
+// always supplies a non-nil logger; this only matters for middleware
+// constructed directly by a test.
+func logOr(logger *slog.Logger) *slog.Logger {
+	if logger == nil {
+		return slog.Default()
+	}
+	return logger
+}
+
 // Logging writes one structured line per request, after the handler
 // completes, carrying the request ID so a log line and the client's own
 // trace of the same request can be joined.

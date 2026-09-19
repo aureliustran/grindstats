@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -137,8 +138,8 @@ func getEnvInt(key string, fallback int) int {
 	if !ok || v == "" {
 		return fallback
 	}
-	var n int
-	if _, err := fmt.Sscanf(v, "%d", &n); err != nil {
+	n, err := strconv.Atoi(v)
+	if err != nil {
 		return fallback
 	}
 	return n

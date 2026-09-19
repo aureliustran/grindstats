@@ -40,9 +40,7 @@ func Auth(
 	log auditlog.Writer,
 	logger *slog.Logger,
 ) gin.HandlerFunc {
-	if logger == nil {
-		logger = slog.Default()
-	}
+	logger = logOr(logger)
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 

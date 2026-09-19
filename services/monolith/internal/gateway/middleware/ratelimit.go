@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"strings"
 	"time"
 
@@ -61,9 +60,7 @@ var rateLimitRules = []rateLimitRule{
 // (fail open for rate limiting — a temporary Redis blip must not deny all
 // requests to rate-limited endpoints).
 func RateLimit(rdb *redis.Client, logger *slog.Logger) gin.HandlerFunc {
-	if logger == nil {
-		logger = slog.Default()
-	}
+	logger = logOr(logger)
 	return func(c *gin.Context) {
 		path := c.Request.URL.Path
 		rule := matchRule(path)
@@ -77,7 +74,7 @@ func RateLimit(rdb *redis.Client, logger *slog.Logger) gin.HandlerFunc {
 		key := authmw.RateLimitKeyPrefix + rule.bucketSuffix + ":" + ip
 		ctx := c.Request.Context()
 
-		count, retryAfter, err := checkAndIncrRateLimit(ctx, rdb, key, rule.limit)
+		count, retryAfter, err := checkAndIncrRateLimit(ctx, rdb, key)
 		if err != nil {
 			logger.WarnContext(ctx, "ratelimit: Redis error, failing open",
 				"request_id", RequestIDFrom(c),
@@ -121,85 +118,32 @@ func matchRule(path string) *rateLimitRule {
 }
 
 // checkAndIncrRateLimit increments the sliding-window counter for key and
-// returns (newCount, ttl, nil). When the key is new, its TTL is set to
-// rateLimitWindow. The TTL after the increment is used as the Retry-After
-// value so clients know when their current window resets.
+// returns (newCount, ttl, nil). The TTL is set only when the key is new
+// (EXPIRE ... NX) so a fixed window actually closes — refreshing it on every
+// request would let a slow-but-steady caller keep the key alive forever and
+// eventually trip the limit on cumulative count alone. The TTL after the
+// increment is used as the Retry-After value so clients know when their
+// current window resets.
 func checkAndIncrRateLimit(
 	ctx context.Context,
 	rdb *redis.Client,
 	key string,
-	_ int64, // limit unused here; comparison done by caller
 ) (count int64, retryAfter time.Duration, err error) {
 	pipe := rdb.Pipeline()
 	incrCmd := pipe.Incr(ctx, key)
-	pipe.Expire(ctx, key, rateLimitWindow)
+	pipe.ExpireNX(ctx, key, rateLimitWindow)
+	ttlCmd := pipe.TTL(ctx, key)
 	if _, execErr := pipe.Exec(ctx); execErr != nil {
 		return 0, 0, fmt.Errorf("ratelimit: pipeline exec: %w", execErr)
 	}
 	count = incrCmd.Val()
 
-	// Retrieve remaining TTL for Retry-After.
-	ttl, ttlErr := rdb.TTL(ctx, key).Result()
-	if ttlErr != nil || ttl < 0 {
-		// Key has no TTL (unlikely after Expire above) or Redis error;
+	ttl := ttlCmd.Val()
+	if ttl < 0 {
+		// Key has no TTL (unlikely after ExpireNX above) or Redis error;
 		// fall back to the full window duration.
 		ttl = rateLimitWindow
 	}
 	return count, ttl, nil
 }
 
-// RateLimitFor is the same as RateLimit but applies a single rule identified
-// by the given path prefix. Useful when be-wiring wants to apply a rate limit
-// to a specific endpoint handler rather than the global chain.
-//
-// This is not wired in gateway.New — it is exported for be-wiring's use.
-func RateLimitFor(
-	rdb *redis.Client,
-	pathPrefix string,
-	limit int64,
-	bucketSuffix string,
-	logger *slog.Logger,
-) gin.HandlerFunc {
-	if logger == nil {
-		logger = slog.Default()
-	}
-	rule := &rateLimitRule{pathPrefix: pathPrefix, limit: limit, bucketSuffix: bucketSuffix}
-	return func(c *gin.Context) {
-		ip := c.ClientIP()
-		key := authmw.RateLimitKeyPrefix + rule.bucketSuffix + ":" + ip
-		ctx := c.Request.Context()
-
-		count, retryAfter, err := checkAndIncrRateLimit(ctx, rdb, key, limit)
-		if err != nil {
-			logger.WarnContext(ctx, "ratelimit: Redis error, failing open",
-				"request_id", RequestIDFrom(c),
-				"key", key,
-				"error", err,
-			)
-			c.Next()
-			return
-		}
-
-		if count > limit {
-			retrySeconds := int(retryAfter.Seconds())
-			if retrySeconds < 1 {
-				retrySeconds = 1
-			}
-			c.Header("Retry-After", fmt.Sprintf("%d", retrySeconds))
-			httpkit.Error(c, auditmodel.ErrAuthRateLimited)
-			return
-		}
-
-		c.Next()
-	}
-}
-
-// RateLimitedResponse is a compile-time check that AUTH_RATE_LIMITED maps to
-// 429 in the generated error code table. If the table ever changes this test
-// value the build fails with a useful message.
-var _ = func() struct{} {
-	if http.StatusTooManyRequests != httpkit.StatusFor(auditmodel.ErrAuthRateLimited) {
-		panic("ratelimit: AUTH_RATE_LIMITED must map to 429 in auditmodel.ErrorCodes")
-	}
-	return struct{}{}
-}()

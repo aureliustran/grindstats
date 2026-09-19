@@ -38,9 +38,7 @@ const refreshPath = "/api/v1/auth/refresh"
 // middleware because they are registered on a route group without the auth
 // stage; they have no session to bind a CSRF token to.
 func CSRF(rdb *redis.Client, logger *slog.Logger) gin.HandlerFunc {
-	if logger == nil {
-		logger = slog.Default()
-	}
+	logger = logOr(logger)
 	return func(c *gin.Context) {
 		// Exempt safe methods — no state mutation, no CSRF risk.
 		if isSafeMethod(c.Request.Method) {

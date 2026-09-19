@@ -11,7 +11,6 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"grindstats/libs/auditlog"
-	"grindstats/libs/auditmodel"
 	"grindstats/libs/authmw"
 	"grindstats/services/monolith/internal/gateway/middleware"
 )
@@ -54,9 +53,9 @@ type Server struct {
 //	rate limit → auth → CSRF → verified-write → [role] → handler
 //
 // The [role] stage is not applied globally; it is applied per-route-group by
-// be-wiring (wave 4) via middleware.RequireRole. The five stages above it are
-// applied here. Public route groups (unauthenticated auth endpoints) use
-// server.V1; authenticated endpoints use server.Protected.
+// be-wiring (wave 4) via middleware.RequireRole directly. The five stages
+// above it are applied here. Public route groups (unauthenticated auth
+// endpoints) use server.V1; authenticated endpoints use server.Protected.
 func New(deps Deps) *Server {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
@@ -110,16 +109,4 @@ func New(deps Deps) *Server {
 		V1:        v1,
 		Protected: protected,
 	}
-}
-
-// RequireRole is a convenience shim so be-wiring can apply the role check
-// to a route group without importing the middleware package directly. This
-// keeps the middleware package as the canonical home for the implementation
-// while the gateway package owns the composition surface.
-func RequireRole(
-	required auditmodel.Role,
-	log auditlog.Writer,
-	logger *slog.Logger,
-) gin.HandlerFunc {
-	return middleware.RequireRole(required, log, logger)
 }

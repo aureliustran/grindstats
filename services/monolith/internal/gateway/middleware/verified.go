@@ -31,9 +31,7 @@ const authAPIPrefix = "/api/v1/auth/"
 // /api/v1/auth/ → 403 AUTH_EMAIL_UNVERIFIED, emitting
 // auth.write_blocked_unverified with user_id, path and request_id.
 func VerifiedWrite(log auditlog.Writer, logger *slog.Logger) gin.HandlerFunc {
-	if logger == nil {
-		logger = slog.Default()
-	}
+	logger = logOr(logger)
 	return func(c *gin.Context) {
 		// Safe methods never mutate state; the rule does not apply.
 		if isSafeMethod(c.Request.Method) {
