@@ -11,6 +11,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"grindstats/libs/auditlog"
+	"grindstats/libs/authmw"
+	"grindstats/services/monolith/internal/auth/credentials"
+	"grindstats/services/monolith/internal/auth/hibp"
+	"grindstats/services/monolith/internal/auth/mailer"
+	"grindstats/services/monolith/internal/auth/oauth"
+	"grindstats/services/monolith/internal/auth/session"
+	"grindstats/services/monolith/internal/auth/store"
 	"grindstats/services/monolith/internal/gateway"
 	"grindstats/services/monolith/internal/gateway/health"
 	"grindstats/services/monolith/internal/platform/config"
@@ -40,10 +48,37 @@ func main() {
 	})
 	defer redisClient.Close()
 
+	// ── Auth infrastructure ───────────────────────────────────────────────────
+
+	// Load RS256 key material. The private key and its matching public key
+	// must both exist at the configured paths — a startup failure here is
+	// intentional: a missing key means no token can be minted or verified.
+	keySet, err := authmw.LoadKeySet(cfg.Auth.JWTPrivateKeyPath, cfg.Auth.JWTPublicKeysDir)
+	if err != nil {
+		logger.Error("load JWT key set", "error", err)
+		os.Exit(1)
+	}
+
+	// Audit writer — the real PgxWriter writes to audit.events in Postgres.
+	auditWriter := auditlog.New(pool, logger)
+
+	// ── Auth repositories (store layer) ──────────────────────────────────────
+
+	accountStore := store.NewAccountStore(pool)
+	oauthIdentityStore := store.NewOAuthIdentityStore(pool)
+	linkTokenStore := store.NewLinkTokenStore(pool)
+
+	// ── Gateway assembly ──────────────────────────────────────────────────────
+
 	srv := gateway.New(gateway.Deps{
 		Logger:         logger,
 		AllowedOrigins: cfg.AllowedOrigins,
+		KeySet:         keySet,
+		Redis:          redisClient,
+		AuditLog:       auditWriter,
 	})
+
+	// ── Health routes (GATE-001, unchanged) ───────────────────────────────────
 
 	healthHandler := health.Handler{
 		Logger: logger,
@@ -64,7 +99,77 @@ func main() {
 	}
 	healthHandler.RegisterRoutes(srv.Engine)
 
-	// srv.V1 ("/api/v1") is created empty here, awaiting AUTH-002's routes.
+	// ── Auth domain handlers ──────────────────────────────────────────────────
+
+	// Session handler: implements the auth session lifecycle AND
+	// authdomain.SessionIssuer (used by credentials and oauth handlers below).
+	cookieOpts := authmw.CookieOptions{Secure: cfg.Auth.CookieSecure}
+	sessionHandler := session.New(keySet, redisClient, accountStore, auditWriter, cookieOpts, logger)
+
+	// HIBP password-breach check (D3). Fail-open on network errors.
+	hibpClient := hibp.New(cfg.Auth.HIBPEnabled, 2*time.Second)
+
+	// Mailer: "dev" logs deep-links to the structured log (local dev only).
+	// "noop" or any other value → no-op (production would substitute a real
+	// SMTP or SES implementation in a future story).
+	var m mailer.Mailer
+	if cfg.Auth.MailerMode == "dev" {
+		m = mailer.NewDev(logger, cfg.Auth.BaseURL)
+	} else {
+		m = &noopMailer{}
+	}
+
+	// Password hasher (argon2id, OWASP defaults — SEC-01).
+	hasher, err := credentials.NewPasswordHasher(credentials.DefaultArgon2Params)
+	if err != nil {
+		logger.Error("init password hasher", "error", err)
+		os.Exit(1)
+	}
+
+	// Credentials handler (register, verify-email, password-reset/*, oauth/link/confirm).
+	credHandler := credentials.New(
+		accountStore,
+		oauthIdentityStore,
+		linkTokenStore,
+		sessionHandler,
+		hasher,
+		hibpClient,
+		m,
+		auditWriter,
+	)
+
+	// AccountProvisioner for the OAuth flow — implemented by credentials.Provisioner,
+	// shared with the OAuth handler without the two packages importing each other.
+	provisioner := credentials.NewProvisioner(accountStore, oauthIdentityStore, auditWriter)
+
+	// OAuth handler (Google authorize + callback, PKCE, state-cookie HMAC).
+	oauthHandler := oauth.New(
+		oauth.Config{
+			ClientID:     cfg.Auth.GoogleClientID,
+			ClientSecret: cfg.Auth.GoogleClientSecret,
+			RedirectURL:  cfg.Auth.GoogleRedirectURL,
+			StateKey:     cfg.Auth.GoogleStateKey,
+			CookieSecure: cfg.Auth.CookieSecure,
+		},
+		provisioner,
+		accountStore,
+		linkTokenStore,
+		sessionHandler,
+		m,
+		auditWriter,
+	)
+
+	// ── Route registration ────────────────────────────────────────────────────
+	//
+	// Public (unauthenticated) endpoints are registered on srv.V1; the auth
+	// middleware stage does NOT run for routes in this group. Authenticated
+	// endpoints (logout, logout-all, /users/me) go on srv.Protected, which
+	// applies auth+CSRF+verified-write. session.Handler exposes RegisterPublic
+	// and RegisterProtected for exactly this split (AMD-005, resolved).
+	credHandler.Register(srv.V1)
+	oauthHandler.Register(srv.V1)
+	sessionHandler.RegisterPublic(srv.V1)
+	sessionHandler.RegisterProtected(srv.Protected)
 
 	addr := ":" + cfg.ServerPort
 	logger.Info("listening", "addr", addr)
@@ -73,3 +178,11 @@ func main() {
 		os.Exit(1)
 	}
 }
+
+// noopMailer silently drops every send. Used when AUTH_MAILER_MODE is not
+// "dev". Production email delivery is out of scope for AUTH-001 run 1.
+type noopMailer struct{}
+
+func (*noopMailer) SendVerification(_ context.Context, _, _ string) error  { return nil }
+func (*noopMailer) SendPasswordReset(_ context.Context, _, _ string) error { return nil }
+func (*noopMailer) SendOAuthLink(_ context.Context, _, _ string) error     { return nil }

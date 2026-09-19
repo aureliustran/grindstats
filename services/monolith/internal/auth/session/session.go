@@ -73,21 +73,37 @@ func (h *Handler) WithClock(fn func() time.Time) *Handler {
 	return h
 }
 
-// Register mounts the auth session routes onto r.
+// Register mounts every session route onto r. Kept for tests that assemble
+// their own router with a single group and their own claims-setting
+// middleware (see handler_test helpers) — it must not be used by the
+// composition root, because login/refresh and logout/logout-all//users/me
+// require opposite auth-middleware treatment (AMD-005). Production wiring
+// uses RegisterPublic and RegisterProtected instead.
+func (h *Handler) Register(r gin.IRouter) {
+	h.RegisterPublic(r)
+	h.RegisterProtected(r)
+}
+
+// RegisterPublic mounts the unauthenticated session routes onto r — no
+// access token is required or expected. Call this on the gateway's public
+// group (contract §1 rows 8, 9; AMD-005).
 //
-//	POST /auth/login       — unauthenticated; validates credentials, issues session
+//	POST /auth/login       — validates credentials, issues session
 //	POST /auth/refresh     — refresh-cookie only; rotates token pair
+func (h *Handler) RegisterPublic(r gin.IRouter) {
+	r.POST("/auth/login", h.handleLogin)
+	r.POST("/auth/refresh", h.handleRefresh)
+}
+
+// RegisterProtected mounts the authenticated session routes onto r — these
+// handlers read authmw.Claims from the request context, populated by
+// middleware.Auth. Call this on the gateway's Protected group, which also
+// applies CSRF and verified-write (contract §1 rows 10-12; AMD-005).
+//
 //	POST /auth/logout      — access cookie + X-CSRF-Token; ends current session
 //	POST /auth/logout-all  — access cookie + X-CSRF-Token; ends every session
 //	GET  /users/me         — access cookie; returns profile + CSRF token
-//
-// Handlers for logout, logout-all, and /users/me read authmw.Claims from the
-// request context. When deployed behind the gateway's Protected group the
-// claims are placed there by middleware.Auth; in tests a lightweight
-// in-line middleware sets them directly (see handler_test helpers).
-func (h *Handler) Register(r gin.IRouter) {
-	r.POST("/auth/login", h.handleLogin)
-	r.POST("/auth/refresh", h.handleRefresh)
+func (h *Handler) RegisterProtected(r gin.IRouter) {
 	r.POST("/auth/logout", h.handleLogout)
 	r.POST("/auth/logout-all", h.handleLogoutAll)
 	r.GET("/users/me", h.handleMe)
