@@ -1,12 +1,8 @@
 package middleware
 
 import (
-	"crypto/rand"
-	"encoding/hex"
-	"fmt"
-	"time"
-
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // RequestIDHeader is read from an incoming request and echoed on the
@@ -23,7 +19,7 @@ func RequestID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.GetHeader(RequestIDHeader)
 		if id == "" {
-			id = generateRequestID()
+			id = uuid.NewString()
 		}
 		c.Set(requestIDContextKey, id)
 		c.Writer.Header().Set(RequestIDHeader, id)
@@ -40,14 +36,4 @@ func RequestIDFrom(c *gin.Context) string {
 		}
 	}
 	return ""
-}
-
-func generateRequestID() string {
-	var b [16]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		// crypto/rand failing is effectively unheard of, but a request ID
-		// must never block or fail the request that needs it traced.
-		return fmt.Sprintf("fallback-%d", time.Now().UnixNano())
-	}
-	return hex.EncodeToString(b[:])
 }

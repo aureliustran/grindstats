@@ -18,13 +18,13 @@ build/
 *.tsbuildinfo
 
 # Env / secrets
+#
+# SEC-06: no secret (including AUTH_JWT_PRIVATE_KEY, the RS256 signing key)
+# is ever committed — .env holds real values locally and is git-ignored;
+# .env.example documents variable names only.
 .env
 .env.*
 !.env.example
-
-# Local dev key material — SEC-06: never commit secrets or generated keys.
-# Run scripts/dev/gen-jwt-keys.sh to create these.
-.local/
 
 # Docker
 docker-compose.override.yml

@@ -50,10 +50,10 @@ func main() {
 
 	// ── Auth infrastructure ───────────────────────────────────────────────────
 
-	// Load RS256 key material. The private key and its matching public key
-	// must both exist at the configured paths — a startup failure here is
-	// intentional: a missing key means no token can be minted or verified.
-	keySet, err := authmw.LoadKeySet(cfg.Auth.JWTPrivateKeyPath, cfg.Auth.JWTPublicKeysDir)
+	// Load RS256 key material from AUTH_JWT_PRIVATE_KEY (a PEM value, not a
+	// file path — see config.Auth.JWTPrivateKeyPEM). A startup failure here is
+	// intentional: no key means no token can be minted or verified.
+	keySet, err := authmw.LoadKeySetFromPEM(cfg.Auth.JWTPrivateKeyPEM, cfg.Auth.JWTPreviousPublicKeysPEM...)
 	if err != nil {
 		logger.Error("load JWT key set", "error", err)
 		os.Exit(1)

@@ -2,11 +2,11 @@ package authmw
 
 import (
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -33,82 +33,119 @@ type KeySet struct {
 	publicKeys map[string]*rsa.PublicKey
 }
 
-// LoadKeySet reads the private key at privateKeyPath (PEM PKCS#8 or PKCS#1)
-// and all *.pub files in pubKeyDir (each named <kid>.pub, PEM PKIX). The
-// signing kid is the one whose public half matches the loaded private key.
-// It is an error if no public key in pubKeyDir matches the private key —
-// misconfigured keys would silently produce unverifiable tokens.
-func LoadKeySet(privateKeyPath, pubKeyDir string) (*KeySet, error) {
-	privPEM, err := os.ReadFile(privateKeyPath)
+// LoadKeySetFromPEM builds a KeySet from PEM-encoded key material passed as
+// plain strings — e.g. the value of an environment variable — rather than
+// file paths. This is deliberately the only way to load a KeySet outside of
+// tests: it matches how the key actually arrives in every real environment
+// (SSM Parameter Store SecureString injected as an env var in prod —
+// docs/deployment-aws.md §4 — or a value pasted into .env locally), so there
+// is one code path instead of a files-in-dev / env-vars-in-prod split.
+//
+// privatePEM is the RS256 signing key (PKCS#1 or PKCS#8). Its public half is
+// derived automatically — nothing separate needs to be generated or pasted
+// for the common case of "one active key, no rotation in progress".
+//
+// previousPublicPEMs are additional PEM-encoded RSA public keys accepted for
+// verification only, not signing (SEC-02's two-key rotation window): when
+// rotating to a new private key, pass the outgoing key's public half here so
+// tokens it already signed keep verifying until they expire. Omit it when
+// there is no rotation underway, which is the normal case.
+//
+// The kid for every key (signing and previous) is derived from the first 16
+// hex characters of the SHA-256 digest of its DER-encoded SubjectPublicKeyInfo
+// — stable, collision-resistant in practice, and nothing the caller has to
+// track or paste alongside the key material.
+//
+// privatePEM may use literal "\n" sequences instead of real newlines, which
+// is how a multi-line PEM block survives being pasted into a single-line
+// .env value; both forms are accepted.
+func LoadKeySetFromPEM(privatePEM string, previousPublicPEMs ...string) (*KeySet, error) {
+	if strings.TrimSpace(privatePEM) == "" {
+		return nil, fmt.Errorf("authmw: private key PEM is empty")
+	}
+	rsaPriv, err := parsePrivateKeyPEM(privatePEM)
 	if err != nil {
-		return nil, fmt.Errorf("authmw: read private key: %w", err)
-	}
-	block, _ := pem.Decode(privPEM)
-	if block == nil {
-		return nil, fmt.Errorf("authmw: no PEM block in %q", privateKeyPath)
-	}
-	var rsaPriv *rsa.PrivateKey
-	switch block.Type {
-	case "RSA PRIVATE KEY":
-		rsaPriv, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			return nil, fmt.Errorf("authmw: parse PKCS1 private key: %w", err)
-		}
-	default:
-		priv, err2 := x509.ParsePKCS8PrivateKey(block.Bytes)
-		if err2 != nil {
-			return nil, fmt.Errorf("authmw: parse private key: %w", err2)
-		}
-		var ok bool
-		rsaPriv, ok = priv.(*rsa.PrivateKey)
-		if !ok {
-			return nil, fmt.Errorf("authmw: private key is not RSA")
-		}
+		return nil, fmt.Errorf("authmw: private key: %w", err)
 	}
 
-	entries, err := os.ReadDir(pubKeyDir)
-	if err != nil {
-		return nil, fmt.Errorf("authmw: read public key dir: %w", err)
-	}
+	signingKID := keyID(&rsaPriv.PublicKey)
+	pubKeys := map[string]*rsa.PublicKey{signingKID: &rsaPriv.PublicKey}
 
-	pubKeys := make(map[string]*rsa.PublicKey, len(entries))
-	signingKID := ""
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".pub") {
+	for i, prevPEM := range previousPublicPEMs {
+		if strings.TrimSpace(prevPEM) == "" {
 			continue
 		}
-		kid := strings.TrimSuffix(e.Name(), ".pub")
-		data, err := os.ReadFile(filepath.Join(pubKeyDir, e.Name()))
+		rsaPub, err := parsePublicKeyPEM(prevPEM)
 		if err != nil {
-			return nil, fmt.Errorf("authmw: read public key %s: %w", e.Name(), err)
+			return nil, fmt.Errorf("authmw: previous public key #%d: %w", i, err)
 		}
-		block, _ := pem.Decode(data)
-		if block == nil {
-			return nil, fmt.Errorf("authmw: no PEM block in %s", e.Name())
-		}
-		pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-		if err != nil {
-			return nil, fmt.Errorf("authmw: parse public key %s: %w", e.Name(), err)
-		}
-		rsaPub, ok := pub.(*rsa.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("authmw: public key %s is not RSA", e.Name())
-		}
-		pubKeys[kid] = rsaPub
-		// Identify which kid corresponds to the signing private key.
-		if rsaPriv.PublicKey.N.Cmp(rsaPub.N) == 0 && rsaPriv.PublicKey.E == rsaPub.E {
-			signingKID = kid
-		}
+		pubKeys[keyID(rsaPub)] = rsaPub
 	}
 
-	if signingKID == "" {
-		return nil, fmt.Errorf("authmw: no public key in %q matches the private key", pubKeyDir)
-	}
 	return &KeySet{
 		signingKID: signingKID,
 		privateKey: rsaPriv,
 		publicKeys: pubKeys,
 	}, nil
+}
+
+// keyID derives a stable kid from a public key's fingerprint, so nothing
+// needs to name or track kids by hand (docs/audit-and-errors.md's compact-code
+// pattern uses the same "derive an identifier, don't ask for one" approach).
+func keyID(pub *rsa.PublicKey) string {
+	der, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		// MarshalPKIXPublicKey only fails for key types it doesn't support;
+		// an *rsa.PublicKey is always supported, so this is unreachable.
+		panic(fmt.Sprintf("authmw: marshal public key: %v", err))
+	}
+	sum := sha256.Sum256(der)
+	return "key-" + hex.EncodeToString(sum[:])[:16]
+}
+
+// parsePrivateKeyPEM decodes an RSA private key from a PEM string (PKCS#1 or
+// PKCS#8), accepting literal "\n" in place of real newlines.
+func parsePrivateKeyPEM(pemStr string) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode([]byte(normalizePEM(pemStr)))
+	if block == nil {
+		return nil, fmt.Errorf("no PEM block found")
+	}
+	if block.Type == "RSA PRIVATE KEY" {
+		return x509.ParsePKCS1PrivateKey(block.Bytes)
+	}
+	priv, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("parse PKCS8: %w", err)
+	}
+	rsaPriv, ok := priv.(*rsa.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("key is not RSA")
+	}
+	return rsaPriv, nil
+}
+
+// parsePublicKeyPEM decodes an RSA public key from a PEM string (PKIX).
+func parsePublicKeyPEM(pemStr string) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode([]byte(normalizePEM(pemStr)))
+	if block == nil {
+		return nil, fmt.Errorf("no PEM block found")
+	}
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("parse PKIX: %w", err)
+	}
+	rsaPub, ok := pub.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("key is not RSA")
+	}
+	return rsaPub, nil
+}
+
+// normalizePEM turns literal backslash-n sequences into real newlines, so a
+// PEM block pasted as a single-line .env value parses the same as one kept
+// as a real multi-line string.
+func normalizePEM(s string) string {
+	return strings.ReplaceAll(strings.TrimSpace(s), `\n`, "\n")
 }
 
 // NewKeySetFromMemory constructs a KeySet from in-memory key material. This

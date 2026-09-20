@@ -39,12 +39,18 @@ type Redis struct {
 // Auth holds all settings required by the auth domain (AUTH-001, AUTH-002,
 // AUTH-003). Values correspond to the AUTH_* environment variables.
 type Auth struct {
-	// JWTPrivateKeyPath is the path to the RS256 signing key (PEM, PKCS#1 or
-	// PKCS#8). AUTH_JWT_PRIVATE_KEY_PATH.
-	JWTPrivateKeyPath string
-	// JWTPublicKeysDir is a directory whose *.pub files are the verifying
-	// public keys (each named <kid>.pub, PEM PKIX). AUTH_JWT_PUBLIC_KEYS_DIR.
-	JWTPublicKeysDir string
+	// JWTPrivateKeyPEM is the RS256 signing key (PEM, PKCS#1 or PKCS#8) as a
+	// literal value, not a file path — the same shape it arrives in from SSM
+	// Parameter Store in prod (docs/deployment-aws.md §4) or a pasted value in
+	// .env locally. AUTH_JWT_PRIVATE_KEY. Its public half is derived
+	// automatically; generate one with `openssl genpkey -algorithm RSA
+	// -pkeyopt rsa_keygen_bits:2048` and paste the PEM block as-is.
+	JWTPrivateKeyPEM string
+	// JWTPreviousPublicKeysPEM are additional PEM-encoded public keys trusted
+	// for verification only, for the SEC-02 two-key rotation window. Empty in
+	// the common case of no rotation in progress. AUTH_JWT_PREVIOUS_PUBLIC_KEYS,
+	// multiple keys separated by a blank line.
+	JWTPreviousPublicKeysPEM []string
 	// CookieSecure controls the Secure attribute on session cookies.
 	// Set false via AUTH_COOKIE_SECURE=false for plain-http local dev.
 	CookieSecure bool
@@ -98,16 +104,16 @@ func Load() Config {
 			DB:       getEnvInt("REDIS_DB", 0),
 		},
 		Auth: Auth{
-			JWTPrivateKeyPath:  getEnv("AUTH_JWT_PRIVATE_KEY_PATH", ".local/jwt/signing.key"),
-			JWTPublicKeysDir:   getEnv("AUTH_JWT_PUBLIC_KEYS_DIR", ".local/jwt/public"),
-			CookieSecure:       getEnvBool("AUTH_COOKIE_SECURE", true),
-			HIBPEnabled:        getEnvBool("AUTH_HIBP_ENABLED", true),
-			GoogleClientID:     getEnv("AUTH_GOOGLE_CLIENT_ID", ""),
-			GoogleClientSecret: getEnv("AUTH_GOOGLE_CLIENT_SECRET", ""),
-			GoogleRedirectURL:  getEnv("AUTH_GOOGLE_REDIRECT_URL", "http://localhost:8080/api/v1/auth/oauth/google/callback"),
-			GoogleStateKey:     stateKey,
-			MailerMode:         getEnv("AUTH_MAILER_MODE", "dev"),
-			BaseURL:            getEnv("AUTH_BASE_URL", "http://localhost:5173"),
+			JWTPrivateKeyPEM:         getEnv("AUTH_JWT_PRIVATE_KEY", ""),
+			JWTPreviousPublicKeysPEM: getEnvPEMList("AUTH_JWT_PREVIOUS_PUBLIC_KEYS"),
+			CookieSecure:             getEnvBool("AUTH_COOKIE_SECURE", true),
+			HIBPEnabled:              getEnvBool("AUTH_HIBP_ENABLED", true),
+			GoogleClientID:           getEnv("AUTH_GOOGLE_CLIENT_ID", ""),
+			GoogleClientSecret:       getEnv("AUTH_GOOGLE_CLIENT_SECRET", ""),
+			GoogleRedirectURL:        getEnv("AUTH_GOOGLE_REDIRECT_URL", "http://localhost:8080/api/v1/auth/oauth/google/callback"),
+			GoogleStateKey:           stateKey,
+			MailerMode:               getEnv("AUTH_MAILER_MODE", "dev"),
+			BaseURL:                  getEnv("AUTH_BASE_URL", "http://localhost:5173"),
 		},
 		ServerPort:     getEnv("SERVER_PORT", "8080"),
 		AllowedOrigins: getEnvList("CORS_ALLOWED_ORIGINS", "http://localhost:5173"),
@@ -157,4 +163,24 @@ func getEnvBool(key string, fallback bool) bool {
 		return false
 	}
 	return fallback
+}
+
+// getEnvPEMList splits an env var holding zero or more PEM blocks separated
+// by a blank line into individual PEM strings. Accepts literal "\n" in place
+// of real newlines, same as authmw.LoadKeySetFromPEM, since that is how a
+// multi-block value survives being pasted into a single-line .env entry.
+func getEnvPEMList(key string) []string {
+	raw := getEnv(key, "")
+	if raw == "" {
+		return nil
+	}
+	raw = strings.ReplaceAll(raw, `\n`, "\n")
+	parts := strings.Split(raw, "\n\n")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }

@@ -10,7 +10,7 @@ func TestLoad_DefaultsMatchDockerCompose(t *testing.T) {
 		"POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_USER", "POSTGRES_PASSWORD",
 		"POSTGRES_DB", "POSTGRES_SSLMODE", "REDIS_HOST", "REDIS_PORT",
 		"REDIS_PASSWORD", "REDIS_DB", "SERVER_PORT",
-		"AUTH_JWT_PRIVATE_KEY_PATH", "AUTH_JWT_PUBLIC_KEYS_DIR",
+		"AUTH_JWT_PRIVATE_KEY", "AUTH_JWT_PREVIOUS_PUBLIC_KEYS",
 		"AUTH_COOKIE_SECURE", "AUTH_HIBP_ENABLED",
 		"AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET",
 		"AUTH_GOOGLE_REDIRECT_URL", "AUTH_GOOGLE_STATE_KEY",
@@ -31,11 +31,11 @@ func TestLoad_DefaultsMatchDockerCompose(t *testing.T) {
 		t.Errorf("ServerPort = %q, want %q", got, want)
 	}
 	// Auth defaults
-	if got, want := cfg.Auth.JWTPrivateKeyPath, ".local/jwt/signing.key"; got != want {
-		t.Errorf("Auth.JWTPrivateKeyPath = %q, want %q", got, want)
+	if got := cfg.Auth.JWTPrivateKeyPEM; got != "" {
+		t.Errorf("Auth.JWTPrivateKeyPEM default = %q, want empty (no key configured)", got)
 	}
-	if got, want := cfg.Auth.JWTPublicKeysDir, ".local/jwt/public"; got != want {
-		t.Errorf("Auth.JWTPublicKeysDir = %q, want %q", got, want)
+	if got := cfg.Auth.JWTPreviousPublicKeysPEM; got != nil {
+		t.Errorf("Auth.JWTPreviousPublicKeysPEM default = %v, want nil", got)
 	}
 	if !cfg.Auth.CookieSecure {
 		t.Errorf("Auth.CookieSecure default = false, want true")
@@ -116,6 +116,38 @@ func TestLoad_GoogleStateKeyDecodedFromHex(t *testing.T) {
 	want, _ := hex.DecodeString(rawHex)
 	if got := cfg.Auth.GoogleStateKey; string(got) != string(want) {
 		t.Errorf("Auth.GoogleStateKey = %x, want %x", got, want)
+	}
+}
+
+func TestLoad_JWTPrivateKeyFromEnv(t *testing.T) {
+	const pem = "-----BEGIN PRIVATE KEY-----\nMIIBogIBAAKC...\n-----END PRIVATE KEY-----"
+	t.Setenv("AUTH_JWT_PRIVATE_KEY", pem)
+
+	if got := Load().Auth.JWTPrivateKeyPEM; got != pem {
+		t.Errorf("Auth.JWTPrivateKeyPEM = %q, want %q", got, pem)
+	}
+}
+
+func TestLoad_JWTPreviousPublicKeysSplitOnBlankLine(t *testing.T) {
+	const key1 = "-----BEGIN PUBLIC KEY-----\nAAA\n-----END PUBLIC KEY-----"
+	const key2 = "-----BEGIN PUBLIC KEY-----\nBBB\n-----END PUBLIC KEY-----"
+	t.Setenv("AUTH_JWT_PREVIOUS_PUBLIC_KEYS", key1+"\n\n"+key2)
+
+	got := Load().Auth.JWTPreviousPublicKeysPEM
+	if len(got) != 2 || got[0] != key1 || got[1] != key2 {
+		t.Errorf("Auth.JWTPreviousPublicKeysPEM = %v, want [%q %q]", got, key1, key2)
+	}
+}
+
+func TestLoad_JWTPreviousPublicKeysAcceptsLiteralBackslashN(t *testing.T) {
+	// A PEM block pasted into a single-line .env value carries literal "\n"
+	// sequences instead of real newlines; getEnvPEMList must normalize them.
+	t.Setenv("AUTH_JWT_PREVIOUS_PUBLIC_KEYS", `-----BEGIN PUBLIC KEY-----\nAAA\n-----END PUBLIC KEY-----`)
+
+	got := Load().Auth.JWTPreviousPublicKeysPEM
+	want := "-----BEGIN PUBLIC KEY-----\nAAA\n-----END PUBLIC KEY-----"
+	if len(got) != 1 || got[0] != want {
+		t.Errorf("Auth.JWTPreviousPublicKeysPEM = %v, want [%q]", got, want)
 	}
 }
 
